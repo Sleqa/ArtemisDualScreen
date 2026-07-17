@@ -297,6 +297,10 @@ public class EditProfileActivity extends AppCompatActivity {
             if (_pref != null) {
                 _pref.setVisible(false);
             }
+            _pref = findPreference("pref_manage_macros");
+            if (_pref != null) {
+                _pref.setVisible(false);
+            }
 
             // Highlight changed preferences
             java.util.Map<String, ?> patch = diff(

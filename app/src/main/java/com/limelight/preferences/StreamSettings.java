@@ -858,6 +858,18 @@ public class StreamSettings extends AppCompatActivity {
                 });
             }
 
+            _pref = findPreference("pref_manage_macros");
+            if (_pref != null) {
+                _pref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                    @Override
+                    public boolean onPreferenceClick(@NonNull Preference preference) {
+                        Intent intent = new Intent(requireActivity(), com.limelight.dualscreen.MacroListActivity.class);
+                        requireActivity().startActivity(intent);
+                        return false;
+                    }
+                });
+            }
+
             EditTextPreference bitrateEditPref = findPreference(PreferenceConfiguration.CUSTOM_BITRATE_PREF_STRING);
             if (bitrateEditPref != null) {
                 bitrateEditPref.setOnBindEditTextListener((EditText editText) -> {

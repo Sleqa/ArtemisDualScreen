@@ -1,6 +1,7 @@
 package com.limelight.utils;
 
 import android.app.Activity;
+import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.display.DisplayManager;
@@ -17,6 +18,7 @@ import com.limelight.R;
 import com.limelight.ShortcutTrampoline;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.computers.ComputerManagerService;
+import com.limelight.dualscreen.SecondScreenPanelActivity;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.HostHttpResponseException;
 import com.limelight.nvstream.http.NvApp;
@@ -152,6 +154,37 @@ public class ServerHelper {
 
         Intent intent = createStartIntent(parent, app, computer, managerBinder, withVDisplay);
         parent.startActivity(intent);
+
+        maybeStartSecondScreenPanel(parent);
+    }
+
+    /**
+     * Launches the macro/keyboard companion panel on a built-in secondary screen (e.g. AYN Thor)
+     * alongside the normal stream on the main screen. Independent of (and mutually exclusive
+     * with) enableFullExDisplay, which relocates the stream itself onto the secondary display for
+     * casting to an external monitor - that feature already claims the secondary display for its
+     * own purposes, so we skip ours to avoid the two fighting over it.
+     */
+    private static void maybeStartSecondScreenPanel(Activity parent) {
+        PreferenceConfiguration prefConfig = PreferenceConfiguration.readPreferences(parent);
+        if (!prefConfig.enableSecondScreenPanel || prefConfig.enableFullExDisplay) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return;
+        }
+
+        Display secondaryDisplay = getSecondaryDisplay(parent);
+        if (secondaryDisplay == null) {
+            return;
+        }
+
+        ActivityOptions options = ActivityOptions.makeBasic();
+        options.setLaunchDisplayId(secondaryDisplay.getDisplayId());
+
+        Intent panelIntent = new Intent(parent, SecondScreenPanelActivity.class);
+        panelIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        parent.startActivity(panelIntent, options.toBundle());
     }
 
     public static void doNetworkTest(final Activity parent) {

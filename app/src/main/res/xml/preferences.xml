@@ -217,6 +217,13 @@
             android:summary="@string/summary_fullexdisplay_mode"
             android:title="@string/title_fullexdisplay_mode"
             app:iconSpaceReserved="false" />
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="checkbox_enable_second_screen_panel"
+            android:summary="@string/summary_second_screen_panel_mode"
+            android:title="@string/title_second_screen_panel_mode"
+            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
     <PreferenceCategory
@@ -740,6 +747,12 @@
         android:title="@string/title_special_key_layout"
         app:initialExpandedChildrenCount="1"
         app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="pref_manage_macros"
+            android:summary="@string/summary_manage_macros"
+            android:title="@string/title_manage_macros"
+            app:iconSpaceReserved="false" />
 
         <CheckBoxPreference
             android:defaultValue="false"
