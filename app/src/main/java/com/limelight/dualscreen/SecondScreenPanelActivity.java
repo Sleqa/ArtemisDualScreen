@@ -4,10 +4,13 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -27,6 +30,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.limelight.Game;
 import com.limelight.R;
+import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.ExternalControllerView;
 import com.limelight.utils.KeyConfigHelper;
 
@@ -39,6 +43,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
 
     private static final int DESIRED_MACRO_BUTTON_WIDTH_DP = 140;
 
+    private PreferenceConfiguration prefConfig;
     private ExternalControllerView rootLayout;
     private RecyclerView macroRecyclerView;
     private MacroGridAdapter macroGridAdapter;
@@ -50,6 +55,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        prefConfig = PreferenceConfiguration.readPreferences(this);
         initViews();
     }
 
@@ -96,23 +102,76 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         }
     }
 
+    // --- Input forwarding to the live stream ---
+    // The soft keyboard delivers its input as key events to this (focused) activity,
+    // not to the Game activity on the other display, so everything must be forwarded.
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (Game.instance != null) {
+            Game.instance.handleFocusChange(hasFocus);
+        }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (Game.instance != null && Game.instance.handleKeyDown(event)) {
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (Game.instance != null && Game.instance.handleKeyUp(event)) {
+            return true;
+        }
+        return super.onKeyUp(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyMultiple(int keyCode, int repeatCount, KeyEvent event) {
+        if (Game.instance != null && Game.instance.handleKeyMultiple(event)) {
+            return true;
+        }
+        return super.onKeyMultiple(keyCode, repeatCount, event);
+    }
+
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent event) {
+        if (Game.instance != null && Game.instance.onGenericMotionEvent(event)) {
+            return true;
+        }
+        return super.onGenericMotionEvent(event);
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private void createProgrammaticUI() {
         rootLayout = new ExternalControllerView(this);
         rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        rootLayout.setFocusable(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            rootLayout.setFocusedByDefault(true);
+        }
         rootLayout.setInputCallbacks(Game.instance);
-        rootLayout.setCommitTextEnabled(true);
+        // With this pref off (the default), no InputConnection is exposed and the IME
+        // falls back to raw key events, which reach Game via the onKey* overrides below -
+        // the same dual path ExternalDisplayControlActivity relies on.
+        rootLayout.setCommitTextEnabled(prefConfig.enableCommitText);
         setContentView(rootLayout);
 
         // Top-right: manage macros
         LinearLayout topBar = createButtonContainer(Gravity.TOP | Gravity.END);
+        topBar.setFocusable(false);
         topBar.addView(createImageButton(R.drawable.ic_settings, v ->
                 startActivity(new Intent(this, MacroListActivity.class))));
         rootLayout.addView(topBar);
 
         // Bottom-left: soft keyboard toggle
         LinearLayout bottomBar = createButtonContainer(Gravity.BOTTOM | Gravity.START);
+        bottomBar.setFocusable(false);
         bottomBar.addView(createImageButton(R.drawable.ic_android_keyboard, v -> toggleKeyboard()));
         rootLayout.addView(bottomBar);
 
