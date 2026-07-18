@@ -33,6 +33,7 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.video.PerfOverlayListener;
@@ -240,11 +241,24 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         topLeftBar.addView(statsButton);
         rootLayout.addView(topLeftBar);
 
-        // Top-right: manage macros
+        // Top-right: manage macros - the same style of plus FAB used by the macro list
+        // and profiles screens (ic_settings has a broken 256dp intrinsic size that
+        // renders as a cropped mess in an unscaled ImageButton)
         LinearLayout topBar = createButtonContainer(Gravity.TOP | Gravity.END);
         topBar.setFocusable(false);
-        topBar.addView(createImageButton(R.drawable.ic_settings, v ->
-                startActivity(new Intent(this, MacroListActivity.class))));
+        FloatingActionButton manageMacrosFab = new FloatingActionButton(this);
+        manageMacrosFab.setImageResource(R.drawable.ic_add_base);
+        manageMacrosFab.setSize(FloatingActionButton.SIZE_MINI);
+        manageMacrosFab.setContentDescription(getString(R.string.title_manage_macros));
+        manageMacrosFab.setFocusable(false);
+        manageMacrosFab.setOnClickListener(v ->
+                startActivity(new Intent(this, MacroListActivity.class)));
+        LinearLayout.LayoutParams fabParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        int fabMargin = dpToPx(8);
+        fabParams.setMargins(fabMargin, fabMargin, fabMargin, fabMargin);
+        manageMacrosFab.setLayoutParams(fabParams);
+        topBar.addView(manageMacrosFab);
         rootLayout.addView(topBar);
 
         // Bottom-left: soft keyboard toggle + trackpad toggle
