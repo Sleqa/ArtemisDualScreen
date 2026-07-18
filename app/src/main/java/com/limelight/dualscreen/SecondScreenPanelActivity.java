@@ -238,6 +238,10 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         // falls back to raw key events, which reach Game via the onKey* overrides below -
         // the same dual path ExternalDisplayControlActivity relies on.
         rootLayout.setCommitTextEnabled(prefConfig.enableCommitText);
+        // Every ancestor clips children to their bounds by default; without this the
+        // quit handle disappears behind its corner container the moment it's dragged up.
+        rootLayout.setClipChildren(false);
+        rootLayout.setClipToPadding(false);
         setContentView(rootLayout);
 
         // Top-left: performance stats toggle
@@ -599,6 +603,11 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
                         float drag = Math.max(Math.min(dy, 0), -triggerDistance);
                         v.setTranslationY(drag);
                         v.setAlpha(0.5f + 0.5f * (-drag / triggerDistance));
+                        // Pop the handle larger once releasing would trigger the quit
+                        boolean armed = dy <= -triggerDistance;
+                        float scale = armed ? 1.2f : 1.0f;
+                        v.setScaleX(scale);
+                        v.setScaleY(scale);
                         return true;
                     }
                     case MotionEvent.ACTION_UP: {
@@ -609,12 +618,12 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
                             }
                             finish();
                         } else {
-                            v.animate().translationY(0).alpha(0.5f).setDuration(150).start();
+                            v.animate().translationY(0).alpha(0.5f).scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
                         }
                         return true;
                     }
                     case MotionEvent.ACTION_CANCEL:
-                        v.animate().translationY(0).alpha(0.5f).setDuration(150).start();
+                        v.animate().translationY(0).alpha(0.5f).scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
                         return true;
                     default:
                         return false;
