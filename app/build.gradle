@@ -178,10 +178,17 @@ android {
         }
     }
 
-    // Name output APKs ArtemisDS-<flavor>-<abi>-<buildType>.apk
+    // Name output APKs ArtemisDS-v<version>-<abi>.apk, tagging only non-default
+    // flavors/build types (e.g. root, debug) so the common case stays clean.
     applicationVariants.all { variant ->
-        variant.outputs.all {
-            outputFileName = outputFileName.replace("app-", "ArtemisDS-")
+        variant.outputs.all { output ->
+            def abi = output.outputFileName
+                    .replace("app-", "")
+                    .replace("${variant.flavorName}-", "")
+                    .replace("-${variant.buildType.name}.apk", "")
+            def flavorTag = variant.flavorName == "nonRoot_game" ? "" : "-${variant.flavorName}"
+            def typeTag = variant.buildType.name == "release" ? "" : "-${variant.buildType.name}"
+            output.outputFileName = "ArtemisDS-v${variant.versionName}${flavorTag}-${abi}${typeTag}.apk"
         }
     }
 
