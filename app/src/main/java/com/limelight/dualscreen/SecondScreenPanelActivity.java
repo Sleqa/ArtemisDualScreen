@@ -35,6 +35,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.limelight.Game;
 import com.limelight.R;
+import com.limelight.binding.video.PerfOverlayListener;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.ExternalControllerView;
 import com.limelight.utils.KeyConfigHelper;
@@ -87,7 +88,11 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private TextView trackpadHint;
     private ImageButton trackpadButton;
     private ImageButton mouseModeButton;
+    private ImageButton statsButton;
+    private TextView statsOverlayText;
     private boolean trackpadEnabled = false;
+    private boolean statsEnabled = false;
+    private final PerfOverlayListener panelPerfListener = this::onPerfTextUpdate;
     private boolean mouseModeOverridden = false;
     private int previousMouseMode = 0;
 
@@ -158,6 +163,14 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (Game.instance != null) {
+            Game.instance.setSecondScreenPerfListener(null);
+        }
+    }
+
     // --- Input forwarding to the live stream ---
     // The soft keyboard delivers its input as key events to this (focused) activity,
     // not to the Game activity on the other display, so everything must be forwarded.
@@ -218,6 +231,14 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         // the same dual path ExternalDisplayControlActivity relies on.
         rootLayout.setCommitTextEnabled(prefConfig.enableCommitText);
         setContentView(rootLayout);
+
+        // Top-left: performance stats toggle
+        LinearLayout topLeftBar = createButtonContainer(Gravity.TOP | Gravity.START);
+        topLeftBar.setFocusable(false);
+        statsButton = createImageButton(R.drawable.ic_stats, v -> toggleStatsOverlay());
+        statsButton.setAlpha(0.5f);
+        topLeftBar.addView(statsButton);
+        rootLayout.addView(topLeftBar);
 
         // Top-right: manage macros
         LinearLayout topBar = createButtonContainer(Gravity.TOP | Gravity.END);
@@ -287,6 +308,83 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         trackpadHint.setLayoutParams(hintParams);
         trackpadHint.setVisibility(View.GONE);
         rootLayout.addView(trackpadHint);
+
+        statsOverlayText = new TextView(this);
+        statsOverlayText.setTextColor(0xFFCCCCCC);
+        statsOverlayText.setTextSize(11);
+        statsOverlayText.setGravity(Gravity.CENTER_HORIZONTAL);
+        statsOverlayText.setBackgroundColor(0x80000000);
+        statsOverlayText.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
+        FrameLayout.LayoutParams statsParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        statsParams.topMargin = dpToPx(8);
+        statsOverlayText.setLayoutParams(statsParams);
+        statsOverlayText.setVisibility(View.GONE);
+        rootLayout.addView(statsOverlayText);
+    }
+
+    /**
+     * Shows a simplified performance readout (FPS, decoder, network latency, decode time)
+     * on this screen, fed by the same decoder stats string as the main-screen HUD.
+     */
+    private void toggleStatsOverlay() {
+        if (Game.instance == null) {
+            return;
+        }
+        statsEnabled = !statsEnabled;
+        statsButton.setAlpha(statsEnabled ? 1.0f : 0.5f);
+        if (statsEnabled) {
+            statsOverlayText.setText("");
+            statsOverlayText.setVisibility(View.VISIBLE);
+            Game.instance.setSecondScreenPerfListener(panelPerfListener);
+        } else {
+            statsOverlayText.setVisibility(View.GONE);
+            Game.instance.setSecondScreenPerfListener(null);
+        }
+    }
+
+    // Called on the UI thread (Game.onPerfUpdate dispatches via runOnUiThread)
+    private void onPerfTextUpdate(String text) {
+        if (statsEnabled && statsOverlayText != null) {
+            statsOverlayText.setText(simplifyPerfText(text));
+        }
+    }
+
+    /**
+     * Reduces the multi-line HUD text to just the stream/FPS, decoder, network latency,
+     * and decode time lines by matching each line against those strings' static prefixes.
+     * The lite-HUD format is a single compact line already and is shown as-is.
+     */
+    private String simplifyPerfText(String text) {
+        if (!text.contains("\n")) {
+            return text;
+        }
+        String[] wantedPrefixes = {
+                prefixOf(R.string.perf_overlay_streamdetails),
+                prefixOf(R.string.perf_overlay_decoder),
+                prefixOf(R.string.perf_overlay_netlatency),
+                prefixOf(R.string.perf_overlay_dectime),
+        };
+        StringBuilder sb = new StringBuilder();
+        for (String line : text.split("\n")) {
+            for (String prefix : wantedPrefixes) {
+                if (!prefix.isEmpty() && line.startsWith(prefix)) {
+                    if (sb.length() > 0) {
+                        sb.append('\n');
+                    }
+                    sb.append(line);
+                    break;
+                }
+            }
+        }
+        return sb.length() > 0 ? sb.toString() : text;
+    }
+
+    private String prefixOf(int stringRes) {
+        String template = getString(stringRes);
+        int firstSpecifier = template.indexOf('%');
+        return firstSpecifier > 0 ? template.substring(0, firstSpecifier) : template;
     }
 
     /**

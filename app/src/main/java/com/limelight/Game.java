@@ -3927,6 +3927,25 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
+    // Secondary perf-stats consumer (the second-screen panel's overlay). Registering it
+    // forces decoder stat emission on even when the main-screen HUD is disabled, without
+    // making the main-screen overlay visible.
+    private PerfOverlayListener secondScreenPerfListener;
+    private boolean perfOverlayForcedBySecondScreen = false;
+
+    public void setSecondScreenPerfListener(PerfOverlayListener listener) {
+        secondScreenPerfListener = listener;
+        if (listener != null) {
+            if (!prefConfig.enablePerfOverlay) {
+                prefConfig.enablePerfOverlay = true;
+                perfOverlayForcedBySecondScreen = true;
+            }
+        } else if (perfOverlayForcedBySecondScreen) {
+            prefConfig.enablePerfOverlay = false;
+            perfOverlayForcedBySecondScreen = false;
+        }
+    }
+
     @Override
     public void onPerfUpdate(final String text) {
         runOnUiThread(new Runnable() {
@@ -3936,6 +3955,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     performanceOverlayLite.setText(text);
                 }else{
                     performanceOverlayBig.setText(text);
+                }
+                if (secondScreenPerfListener != null) {
+                    secondScreenPerfListener.onPerfUpdate(text);
                 }
             }
         });
