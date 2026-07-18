@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -40,6 +41,11 @@ import com.limelight.binding.video.PerfOverlayListener;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.ExternalControllerView;
 import com.limelight.utils.KeyConfigHelper;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Companion panel shown on a built-in secondary screen (e.g. AYN Thor) while a stream is active
@@ -377,33 +383,72 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     }
 
     /**
-     * Reduces the multi-line HUD text to just the stream/FPS, decoder, network latency,
-     * and decode time lines by matching each line against those strings' static prefixes.
-     * The lite-HUD format is a single compact line already and is shown as-is.
+     * Condenses the multi-line HUD text into a compact two-line readout:
+     *   1920x1080 · 119.9 FPS
+     *   Net 5 ms · Host 0.8 ms · Decode 1.2 ms
+     * where Host is the host-side processing latency (only reported by Sunshine/Apollo
+     * hosts) and Decode is the client-side decode time. Values are pulled from the HUD
+     * lines located via their string-resource prefixes; if parsing fails the raw text is
+     * shown unmodified. The lite-HUD format is a single compact line already and passes
+     * through as-is.
      */
     private String simplifyPerfText(String text) {
         if (!text.contains("\n")) {
             return text;
         }
-        String[] wantedPrefixes = {
-                prefixOf(R.string.perf_overlay_streamdetails),
-                prefixOf(R.string.perf_overlay_decoder),
-                prefixOf(R.string.perf_overlay_netlatency),
-                prefixOf(R.string.perf_overlay_dectime),
-        };
+        String[] lines = text.split("\n");
+        String streamLine = findLine(lines, prefixOf(R.string.perf_overlay_streamdetails));
+        String netLine = findLine(lines, prefixOf(R.string.perf_overlay_netlatency));
+        String hostLine = findLine(lines, prefixOf(R.string.perf_overlay_hostprocessinglatency));
+        String decodeLine = findLine(lines, prefixOf(R.string.perf_overlay_dectime));
+
+        String resolution = matchGroup(streamLine, "(\\d+x\\d+)");
+        String fps = matchGroup(streamLine, "x\\d+\\s+([\\d.,]+)");
+        String netMs = matchGroup(netLine, "(\\d+)");
+        String hostMs = matchGroup(hostLine, "[\\d.,]+/[\\d.,]+/([\\d.,]+)");
+        String decodeMs = matchGroup(decodeLine, "([\\d.,]+)");
+
         StringBuilder sb = new StringBuilder();
-        for (String line : text.split("\n")) {
-            for (String prefix : wantedPrefixes) {
-                if (!prefix.isEmpty() && line.startsWith(prefix)) {
-                    if (sb.length() > 0) {
-                        sb.append('\n');
-                    }
-                    sb.append(line);
-                    break;
-                }
+        if (resolution != null && fps != null) {
+            sb.append(getString(R.string.second_screen_stats_stream, resolution, fps));
+        }
+        List<String> latencyParts = new ArrayList<>();
+        if (netMs != null) {
+            latencyParts.add(getString(R.string.second_screen_stats_net, netMs));
+        }
+        if (hostMs != null) {
+            latencyParts.add(getString(R.string.second_screen_stats_host, hostMs));
+        }
+        if (decodeMs != null) {
+            latencyParts.add(getString(R.string.second_screen_stats_decode, decodeMs));
+        }
+        if (!latencyParts.isEmpty()) {
+            if (sb.length() > 0) {
+                sb.append('\n');
             }
+            sb.append(TextUtils.join(" · ", latencyParts));
         }
         return sb.length() > 0 ? sb.toString() : text;
+    }
+
+    private String findLine(String[] lines, String prefix) {
+        if (prefix.isEmpty()) {
+            return null;
+        }
+        for (String line : lines) {
+            if (line.startsWith(prefix)) {
+                return line;
+            }
+        }
+        return null;
+    }
+
+    private String matchGroup(String input, String regex) {
+        if (input == null) {
+            return null;
+        }
+        Matcher matcher = Pattern.compile(regex).matcher(input);
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     private String prefixOf(int stringRes) {
