@@ -3,6 +3,7 @@ package com.limelight.dualscreen;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -281,12 +282,25 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         rootLayout.addView(bottomBar);
 
         // Bottom-right: swipe-up-to-quit handle. Deliberately not a tap target -
-        // ending the stream requires a full upward swipe so it can't fire by accident.
+        // ending the stream requires dragging it fully up and releasing there, so it
+        // can't fire by accident (sliding back down before release cancels).
         LinearLayout quitBar = createButtonContainer(Gravity.BOTTOM | Gravity.END);
         quitBar.setFocusable(false);
-        ImageButton quitButton = createImageButton(R.drawable.ic_close, null);
+        // Let the handle render outside the container's bounds while dragged upward
+        quitBar.setClipChildren(false);
+        quitBar.setClipToPadding(false);
+        FloatingActionButton quitButton = new FloatingActionButton(this);
+        quitButton.setImageResource(R.drawable.ic_close);
+        quitButton.setSize(FloatingActionButton.SIZE_MINI);
+        quitButton.setBackgroundTintList(ColorStateList.valueOf(0xFFD32F2F));
         quitButton.setAlpha(0.5f);
         quitButton.setContentDescription(getString(R.string.second_screen_quit_hint));
+        quitButton.setFocusable(false);
+        LinearLayout.LayoutParams quitParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        int quitMargin = dpToPx(8);
+        quitParams.setMargins(quitMargin, quitMargin, quitMargin, quitMargin);
+        quitButton.setLayoutParams(quitParams);
         attachSwipeUpToQuit(quitButton);
         quitBar.addView(quitButton);
         rootLayout.addView(quitBar);
@@ -563,46 +577,44 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     }
 
     /**
-     * Arms the quit handle: dragging it upward past the trigger distance ends the
-     * streaming session (Game.disconnect() - the host app keeps running). The handle
-     * follows the finger and brightens as it approaches the trigger point, springing
-     * back if released early.
+     * Arms the quit handle: drag it up the full travel distance AND release it there to
+     * end the streaming session (Game.disconnect() - the host app keeps running). The
+     * handle follows the finger and brightens toward the trigger point; releasing it
+     * anywhere short of the limit (including sliding back down) just springs it back.
      */
     @SuppressLint("ClickableViewAccessibility")
     private void attachSwipeUpToQuit(View handle) {
-        final int triggerDistance = dpToPx(80);
+        final int triggerDistance = dpToPx(120);
         handle.setOnTouchListener(new View.OnTouchListener() {
             private float downRawY;
-            private boolean triggered;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         downRawY = event.getRawY();
-                        triggered = false;
                         return true;
                     case MotionEvent.ACTION_MOVE: {
                         float dy = event.getRawY() - downRawY; // negative when swiping up
                         float drag = Math.max(Math.min(dy, 0), -triggerDistance);
                         v.setTranslationY(drag);
                         v.setAlpha(0.5f + 0.5f * (-drag / triggerDistance));
-                        if (!triggered && dy <= -triggerDistance) {
-                            triggered = true;
-                            v.setTranslationY(0);
-                            v.setAlpha(0.5f);
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP: {
+                        float dy = event.getRawY() - downRawY;
+                        if (dy <= -triggerDistance) {
                             if (Game.instance != null) {
                                 Game.instance.disconnect();
                             }
                             finish();
+                        } else {
+                            v.animate().translationY(0).alpha(0.5f).setDuration(150).start();
                         }
                         return true;
                     }
-                    case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
-                        if (!triggered) {
-                            v.animate().translationY(0).alpha(0.5f).setDuration(150).start();
-                        }
+                        v.animate().translationY(0).alpha(0.5f).setDuration(150).start();
                         return true;
                     default:
                         return false;
