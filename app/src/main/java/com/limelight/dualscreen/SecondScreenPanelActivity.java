@@ -48,6 +48,9 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private RecyclerView macroRecyclerView;
     private MacroGridAdapter macroGridAdapter;
     private TextView emptyStateText;
+    private TextView trackpadHint;
+    private ImageButton trackpadButton;
+    private boolean trackpadEnabled = false;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int failCount = 0;
@@ -169,10 +172,13 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
                 startActivity(new Intent(this, MacroListActivity.class))));
         rootLayout.addView(topBar);
 
-        // Bottom-left: soft keyboard toggle
+        // Bottom-left: soft keyboard toggle + trackpad toggle
         LinearLayout bottomBar = createButtonContainer(Gravity.BOTTOM | Gravity.START);
         bottomBar.setFocusable(false);
         bottomBar.addView(createImageButton(R.drawable.ic_android_keyboard, v -> toggleKeyboard()));
+        trackpadButton = createImageButton(R.drawable.ic_trackpad, v -> toggleTrackpad());
+        trackpadButton.setAlpha(0.5f);
+        bottomBar.addView(trackpadButton);
         rootLayout.addView(bottomBar);
 
         // Macro grid
@@ -212,6 +218,40 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         emptyStateText.setLayoutParams(emptyParams);
         emptyStateText.setVisibility(View.GONE);
         rootLayout.addView(emptyStateText);
+
+        trackpadHint = new TextView(this);
+        trackpadHint.setText(R.string.second_screen_trackpad_hint);
+        trackpadHint.setTextColor(0x66FFFFFF);
+        trackpadHint.setTextSize(14);
+        trackpadHint.setGravity(Gravity.CENTER);
+        FrameLayout.LayoutParams hintParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        trackpadHint.setLayoutParams(hintParams);
+        trackpadHint.setVisibility(View.GONE);
+        rootLayout.addView(trackpadHint);
+    }
+
+    /**
+     * Turns the whole panel surface into a touchpad for the host PC's mouse, forwarding
+     * touches into the stream the same way ExternalDisplayControlActivity's controller
+     * surface does. Pointer behavior (natural/gaming trackpad, absolute) follows the
+     * in-stream mouse mode selected from the game menu.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private void toggleTrackpad() {
+        trackpadEnabled = !trackpadEnabled;
+        trackpadButton.setAlpha(trackpadEnabled ? 1.0f : 0.5f);
+        if (trackpadEnabled) {
+            rootLayout.setOnTouchListener((v, event) -> {
+                if (Game.instance != null) {
+                    Game.instance.handleMotionEvent(v, event);
+                }
+                return true;
+            });
+        } else {
+            rootLayout.setOnTouchListener(null);
+        }
+        updateCenterVisibility();
     }
 
     private void onMacroTapped(KeyConfigHelper.Shortcut macro) {
@@ -230,6 +270,17 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private void refreshMacros() {
         KeyConfigHelper.ShortcutFile file = KeyConfigHelper.loadShortcutFile(this);
         macroGridAdapter.setMacros(file != null ? file.data : null);
+        updateCenterVisibility();
+    }
+
+    private void updateCenterVisibility() {
+        if (trackpadEnabled) {
+            macroRecyclerView.setVisibility(View.GONE);
+            emptyStateText.setVisibility(View.GONE);
+            trackpadHint.setVisibility(View.VISIBLE);
+            return;
+        }
+        trackpadHint.setVisibility(View.GONE);
         boolean empty = macroGridAdapter.getItemCount() == 0;
         emptyStateText.setVisibility(empty ? View.VISIBLE : View.GONE);
         macroRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);

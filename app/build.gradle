@@ -56,7 +56,7 @@ android {
 
             resValue "string",
                     "obtainium_app_url",
-                    "https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.limelight.noir%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FSleqa%2FArtemisDualScreen%22%2C%22author%22%3A%22Sleqa%22%2C%22name%22%3A%22Artemis%20Dual%20Screen%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22arm64%5C%22%2C%5C%22matchGroutToUse%5C%22%3A%5C%22%241%5C%22%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22v(.%2B)%5C%22%7D%22%7D"
+                    "https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.limelight.noir%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FSleqa%2FArtemisDualScreen%22%2C%22author%22%3A%22Sleqa%22%2C%22name%22%3A%22ArtemisDS%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22arm64%5C%22%2C%5C%22matchGroutToUse%5C%22%3A%5C%22%241%5C%22%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22v(.%2B)%5C%22%7D%22%7D"
 
             applicationId "com.limelight"
             dimension "root"
@@ -154,9 +154,9 @@ android {
             //
             // TL;DR: Leave the following line alone!
             applicationIdSuffix ".noir"
-            resValue "string", "app_label", "Artemis"
-            resValue "string", "app_label_root", "Artemis (Root)"
-            resValue "string", "app_label_game", "Artemis (Game)"
+            resValue "string", "app_label", "ArtemisDS"
+            resValue "string", "app_label_root", "ArtemisDS (Root)"
+            resValue "string", "app_label_game", "ArtemisDS (Game)"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -175,6 +175,13 @@ android {
             enable true
             reset()
             include "x86", "x86_64", "armeabi-v7a", "arm64-v8a"
+        }
+    }
+
+    // Name output APKs ArtemisDS-<flavor>-<abi>-<buildType>.apk
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = outputFileName.replace("app-", "ArtemisDS-")
         }
     }
 
