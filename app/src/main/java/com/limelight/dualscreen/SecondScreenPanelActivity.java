@@ -8,12 +8,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.inputmethod.BaseInputConnection;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -22,6 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -43,6 +48,37 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
 
     private static final int DESIRED_MACRO_BUTTON_WIDTH_DP = 140;
 
+    /**
+     * Panel root view that always acts as an IME target. When the commit-text pref is off,
+     * ExternalControllerView exposes no InputConnection at all, which makes
+     * InputMethodManager.showSoftInput() refuse to serve the view - forcing the flaky
+     * toggleSoftInput() API whose show/hide state desyncs whenever the user dismisses the
+     * keyboard themselves. Exposing a TYPE_NULL editor keeps the IME in raw key-event mode
+     * (the exact input path the panel already forwards) while making explicit
+     * show/hide calls reliable.
+     */
+    public static class PanelRootView extends ExternalControllerView {
+        public PanelRootView(Context context) {
+            super(context);
+        }
+
+        @Override
+        public boolean onCheckIsTextEditor() {
+            return true;
+        }
+
+        @Override
+        public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+            InputConnection connection = super.onCreateInputConnection(outAttrs);
+            if (connection == null) {
+                outAttrs.inputType = InputType.TYPE_NULL;
+                outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_FLAG_NO_FULLSCREEN;
+                connection = new BaseInputConnection(this, false);
+            }
+            return connection;
+        }
+    }
+
     private PreferenceConfiguration prefConfig;
     private ExternalControllerView rootLayout;
     private RecyclerView macroRecyclerView;
@@ -60,6 +96,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int failCount = 0;
+    private boolean imeVisible = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +121,16 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         windowInsetsController.setSystemBarsBehavior(
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
+
+        // Track the keyboard's real visibility so the toggle button can issue explicit
+        // show/hide calls instead of relying on toggleSoftInput's desync-prone state.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+            ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (v, insets) -> {
+                imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+                return ViewCompat.onApplyWindowInsets(v, insets);
+            });
+        }
 
         createProgrammaticUI();
         refreshMacros();
@@ -157,10 +204,11 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
 
     @SuppressLint("ClickableViewAccessibility")
     private void createProgrammaticUI() {
-        rootLayout = new ExternalControllerView(this);
+        rootLayout = new PanelRootView(this);
         rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         rootLayout.setFocusable(true);
+        rootLayout.setFocusableInTouchMode(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             rootLayout.setFocusedByDefault(true);
         }
@@ -330,7 +378,20 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
 
     private void toggleKeyboard() {
         InputMethodManager inputManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        inputManager.toggleSoftInput(0, 0);
+        rootLayout.requestFocus();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Explicit show/hide keyed off the keyboard's actual (insets-reported)
+            // visibility. toggleSoftInput's internal state goes stale whenever the user
+            // dismisses the keyboard via back/swipe, leaving the button dead until the
+            // window regains focus.
+            if (imeVisible) {
+                inputManager.hideSoftInputFromWindow(rootLayout.getWindowToken(), 0);
+            } else {
+                inputManager.showSoftInput(rootLayout, InputMethodManager.SHOW_IMPLICIT);
+            }
+        } else {
+            inputManager.toggleSoftInput(0, 0);
+        }
     }
 
     private LinearLayout createButtonContainer(int gravity) {
