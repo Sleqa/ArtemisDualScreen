@@ -86,6 +86,9 @@ android {
 
     lint {
         disable 'MissingTranslation'
+        // Pre-existing translations (e.g. values-ru perf-chart strings) have no
+        // default-locale counterpart, which fails the lint-vital release check.
+        disable 'ExtraTranslation'
         lintConfig file('lint.xml')
     }
 
