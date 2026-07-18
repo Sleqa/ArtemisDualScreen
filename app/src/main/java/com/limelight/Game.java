@@ -4150,7 +4150,24 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
+    // Tracks the last mode passed to applyMouseMode so callers (e.g. the second-screen
+    // panel's temporary trackpad override) can save and restore the active mode.
+    private int currentMouseMode = 0;
+
+    public int getMouseMode() {
+        return currentMouseMode;
+    }
+
+    /**
+     * Applies a mouse mode without persisting it (unlike selectMouseMode's dialog,
+     * which may save the choice). Mode indices match the mouse_mode_names array.
+     */
+    public void setMouseMode(int mode) {
+        applyMouseMode(mode);
+    }
+
     private void applyMouseMode(int mode) {
+        currentMouseMode = mode;
         switch (mode) {
             case 0: // Multi-touch
                 prefConfig.enableMultiTouchScreen = true;

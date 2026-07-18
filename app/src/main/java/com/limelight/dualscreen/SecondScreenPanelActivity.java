@@ -50,7 +50,13 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private TextView emptyStateText;
     private TextView trackpadHint;
     private ImageButton trackpadButton;
+    private ImageButton mouseModeButton;
     private boolean trackpadEnabled = false;
+    private boolean mouseModeOverridden = false;
+    private int previousMouseMode = 0;
+
+    // Index of "Trackpad (natural)" in the mouse_mode_names array (see Game.applyMouseMode)
+    private static final int MOUSE_MODE_TRACKPAD_NATURAL = 2;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int failCount = 0;
@@ -179,6 +185,10 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         trackpadButton = createImageButton(R.drawable.ic_trackpad, v -> toggleTrackpad());
         trackpadButton.setAlpha(0.5f);
         bottomBar.addView(trackpadButton);
+        mouseModeButton = createImageButton(R.drawable.ic_mouse, v -> toggleMouseModeOverride());
+        mouseModeButton.setAlpha(0.5f);
+        mouseModeButton.setVisibility(View.GONE);
+        bottomBar.addView(mouseModeButton);
         rootLayout.addView(bottomBar);
 
         // Macro grid
@@ -242,6 +252,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         trackpadEnabled = !trackpadEnabled;
         trackpadButton.setAlpha(trackpadEnabled ? 1.0f : 0.5f);
         if (trackpadEnabled) {
+            mouseModeButton.setVisibility(View.VISIBLE);
             rootLayout.setOnTouchListener((v, event) -> {
                 if (Game.instance != null) {
                     Game.instance.handleMotionEvent(v, event);
@@ -250,8 +261,39 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
             });
         } else {
             rootLayout.setOnTouchListener(null);
+            mouseModeButton.setVisibility(View.GONE);
+            // Leaving trackpad mode restores whatever mouse mode the stream had
+            if (mouseModeOverridden) {
+                if (Game.instance != null) {
+                    Game.instance.setMouseMode(previousMouseMode);
+                }
+                mouseModeOverridden = false;
+                mouseModeButton.setAlpha(0.5f);
+            }
         }
         updateCenterVisibility();
+    }
+
+    /**
+     * Temporarily switches the stream's mouse mode to Trackpad (natural) - the classic
+     * drag-to-move-the-cursor behavior - while the panel trackpad is in use, since the
+     * user's regular mode (e.g. direct touch) makes trackpad dragging act like touch
+     * gestures instead. Toggling off (or exiting trackpad mode) restores the prior mode.
+     */
+    private void toggleMouseModeOverride() {
+        if (Game.instance == null) {
+            return;
+        }
+        if (!mouseModeOverridden) {
+            previousMouseMode = Game.instance.getMouseMode();
+            Game.instance.setMouseMode(MOUSE_MODE_TRACKPAD_NATURAL);
+            mouseModeOverridden = true;
+            mouseModeButton.setAlpha(1.0f);
+        } else {
+            Game.instance.setMouseMode(previousMouseMode);
+            mouseModeOverridden = false;
+            mouseModeButton.setAlpha(0.5f);
+        }
     }
 
     private void onMacroTapped(KeyConfigHelper.Shortcut macro) {
