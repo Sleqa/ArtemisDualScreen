@@ -527,6 +527,7 @@
     <string name="macro_delete_content_description">Delete macro</string>
     <string name="macro_remove_key_content_description">Remove key</string>
     <string name="second_screen_trackpad_hint">Trackpad active — drag to move the mouse</string>
+    <string name="second_screen_quit_hint">Swipe up to end the stream</string>
     <string name="title_top_center_display">Display in Top Center</string>
     <string name="summary_top_center_display">Streaming picture will be aligned to the top of the screen instead of centered when resolution is not native.</string>
     <string name="title_touch_sensitivity">Touch Screen Sensitivity</string>

@@ -274,6 +274,17 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         bottomBar.addView(mouseModeButton);
         rootLayout.addView(bottomBar);
 
+        // Bottom-right: swipe-up-to-quit handle. Deliberately not a tap target -
+        // ending the stream requires a full upward swipe so it can't fire by accident.
+        LinearLayout quitBar = createButtonContainer(Gravity.BOTTOM | Gravity.END);
+        quitBar.setFocusable(false);
+        ImageButton quitButton = createImageButton(R.drawable.ic_close, null);
+        quitButton.setAlpha(0.5f);
+        quitButton.setContentDescription(getString(R.string.second_screen_quit_hint));
+        attachSwipeUpToQuit(quitButton);
+        quitBar.addView(quitButton);
+        rootLayout.addView(quitBar);
+
         // Macro grid
         macroRecyclerView = new RecyclerView(this);
         FrameLayout.LayoutParams gridParams = new FrameLayout.LayoutParams(
@@ -504,6 +515,55 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         } else {
             inputManager.toggleSoftInput(0, 0);
         }
+    }
+
+    /**
+     * Arms the quit handle: dragging it upward past the trigger distance ends the
+     * streaming session (Game.disconnect() - the host app keeps running). The handle
+     * follows the finger and brightens as it approaches the trigger point, springing
+     * back if released early.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private void attachSwipeUpToQuit(View handle) {
+        final int triggerDistance = dpToPx(80);
+        handle.setOnTouchListener(new View.OnTouchListener() {
+            private float downRawY;
+            private boolean triggered;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downRawY = event.getRawY();
+                        triggered = false;
+                        return true;
+                    case MotionEvent.ACTION_MOVE: {
+                        float dy = event.getRawY() - downRawY; // negative when swiping up
+                        float drag = Math.max(Math.min(dy, 0), -triggerDistance);
+                        v.setTranslationY(drag);
+                        v.setAlpha(0.5f + 0.5f * (-drag / triggerDistance));
+                        if (!triggered && dy <= -triggerDistance) {
+                            triggered = true;
+                            v.setTranslationY(0);
+                            v.setAlpha(0.5f);
+                            if (Game.instance != null) {
+                                Game.instance.disconnect();
+                            }
+                            finish();
+                        }
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (!triggered) {
+                            v.animate().translationY(0).alpha(0.5f).setDuration(150).start();
+                        }
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        });
     }
 
     private LinearLayout createButtonContainer(int gravity) {
