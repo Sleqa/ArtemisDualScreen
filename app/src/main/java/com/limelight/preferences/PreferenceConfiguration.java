@@ -302,6 +302,10 @@ public class PreferenceConfiguration {
     //串流画面顶部居中显示
     public boolean alignDisplayTopCenter;
 
+    // Show a macro/keyboard companion panel on a built-in secondary screen (e.g. AYN Thor)
+    // while streaming, alongside the normal stream on the main screen.
+    public boolean enableSecondScreenPanel;
+
     //触控屏幕灵敏度
     public int touchSensitivityX;
     public int touchSensitivityY;
@@ -966,6 +970,8 @@ private static int getFramePacingValue(Context context) {
         config.enableFullExDisplay=prefs.getBoolean("checkbox_enable_fullexdisplay",false);
 
         config.alignDisplayTopCenter =prefs.getBoolean("checkbox_enable_view_top_center",false);
+
+        config.enableSecondScreenPanel = prefs.getBoolean("checkbox_enable_second_screen_panel", false);
 
         config.touchSensitivityX =prefs.getInt(SEEKBAR_TOUCH_SENSITIVITY,100);
 

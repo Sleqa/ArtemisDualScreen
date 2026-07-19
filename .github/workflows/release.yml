@@ -1,0 +1,57 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - claude/dual-screen-android-plan-xbpb34
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install NDK 27.0.12077973
+        run: |
+          echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.0.12077973"
+
+      - name: Compute version
+        id: version
+        run: |
+          BASE_NAME=$(sed -nE 's/.*: "([0-9.]+)"\)$/\1/p' app/build.gradle | head -1)
+          BASE_CODE=$(sed -nE 's/.*\.toInteger\(\) : ([0-9]+)\)$/\1/p' app/build.gradle | head -1)
+          echo "Base versionName=$BASE_NAME versionCode=$BASE_CODE"
+          echo "name=${BASE_NAME}.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "code=$((BASE_CODE + ${{ github.run_number }}))" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed release APKs
+        run: |
+          ./gradlew assembleNonRoot_gameRelease \
+            -PversionNameOverride=${{ steps.version.outputs.name }} \
+            -PversionCodeOverride=${{ steps.version.outputs.code }}
+
+      - name: List built APKs
+        run: ls -la app/build/outputs/apk/nonRoot_game/release/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.name }}
+          name: ArtemisDS v${{ steps.version.outputs.name }}
+          generate_release_notes: true
+          files: app/build/outputs/apk/nonRoot_game/release/*.apk

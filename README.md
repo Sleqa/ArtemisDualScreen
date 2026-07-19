@@ -1,3 +1,19 @@
+# ArtemisDS (Artemis Dual Screen)
+
+This is a fork of [Artemis](https://github.com/ClassicOldSong/moonlight-android) (itself a fork of Moonlight) for Android, focused on adding native support for **dual-screen Android devices** such as the AYN Odin 2 / Thor.
+
+**Goal:** the main screen behaves exactly like stock Artemis while streaming, while the device's secondary screen becomes a dedicated companion panel with:
+
+- A grid of custom macro buttons (e.g. Alt+Tab, Ctrl+Shift+Esc) that you create and edit in-app
+- A reliable soft-keyboard toggle that forwards typed input straight into the stream
+- A trackpad mode that turns the second screen into a mouse trackpad for the host PC
+- A simplified performance overlay (resolution/FPS, network latency, host + client decode time)
+- A swipe-up-to-quit handle to end the session without touching the main screen
+
+> **Disclaimer:** The dual-screen features in this fork were built with AI assistance (Claude, via Claude Code). They've been tested on-device, but have not been reviewed by the upstream Artemis/Moonlight maintainers, and bugs may exist. Use at your own discretion, and please report issues on [this fork's repository](https://github.com/Sleqa/ArtemisDualScreen/issues) rather than upstream.
+
+---
+
 # Artemis Android
 
 Previously named Moonlight Noir
@@ -63,9 +79,11 @@ The main repo had stayed silent for 5 months, with nobody actually responding to
 
 **Update**: They have contacted me and apologized for this incident, but the fact it **happened** still motivated me to start my own fork.
 
-## Downloads
-* [Download APK directly](https://github.com/ClassicOldSong/moonlight-android/releases)
-* [Use Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.limelight.noir%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FClassicOldSong%2Fmoonlight-android%22%2C%22author%22%3A%22ClassicOldSong%22%2C%22name%22%3A%22Artemis%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22nonRoot%5C%22%2C%5C%22matchGroutToUse%5C%22%3A%5C%22%241%5C%22%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22v(.%2B)%5C%22%7D%22%7D) (recommended)
+## Downloads (this fork - ArtemisDS)
+* [Download APK directly](https://github.com/Sleqa/ArtemisDualScreen/releases)
+* [Use Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.limelight.noir%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FSleqa%2FArtemisDualScreen%22%2C%22author%22%3A%22Sleqa%22%2C%22name%22%3A%22ArtemisDS%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22arm64%5C%22%2C%5C%22matchGroutToUse%5C%22%3A%5C%22%241%5C%22%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22v(.%2B)%5C%22%7D%22%7D) (recommended)
+
+Looking for upstream Artemis instead? See [ClassicOldSong/moonlight-android](https://github.com/ClassicOldSong/moonlight-android).
 
 ## Building
 * Install Android Studio and the Android NDK
