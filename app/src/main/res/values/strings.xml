@@ -512,7 +512,12 @@
     <string name="macro_list_tap_create">Tap + to create your first macro</string>
     <string name="macro_new_macro">New Macro</string>
     <string name="macro_edit_macro">Edit Macro</string>
-    <string name="macro_name_hint">Macro name</string>
+    <string name="macro_name_hint">Macro name (optional)</string>
+    <string name="macro_icon_label">Macro icon</string>
+    <string name="macro_icon_summary">Shown on the key. Tap to choose.</string>
+    <string name="macro_icon_none_glyph">—</string>
+    <string name="macro_icon_pick_title">Choose an icon</string>
+    <string name="macro_unnamed">(no name)</string>
     <string name="macro_selected_keys_label">Keys (in order)</string>
     <string name="macro_no_keys_selected">No keys selected yet</string>
     <string name="macro_pick_keys_label">Tap keys to add them, in order</string>

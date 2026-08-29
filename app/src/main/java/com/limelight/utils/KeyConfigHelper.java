@@ -29,6 +29,9 @@ public class KeyConfigHelper {
         public String name;
         public boolean sticky = false;  // Default to false
         public List<String> keys;
+        // Optional icon shown on the second-screen panel's circular key. Holds a
+        // MacroIconCatalog id; null or empty means the macro has no icon.
+        public String icon;
 
         // Default constructor for Gson
         public Shortcut() {

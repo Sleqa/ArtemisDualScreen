@@ -4,6 +4,8 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -18,8 +20,9 @@ import java.util.Locale;
 
 /**
  * Grid of compact circular macro keys shown on the second-screen companion panel, laid out like
- * the AYN Thor's own second-screen toggles: a filled circle carrying the macro's initials with
- * its full name underneath.
+ * the AYN Thor's own second-screen toggles: a filled circle carrying the macro's icon (or its
+ * initials, when no icon was picked) with the macro's name underneath. Unnamed macros show the
+ * circle alone.
  */
 public class MacroGridAdapter extends RecyclerView.Adapter<MacroGridAdapter.MacroButtonViewHolder> {
 
@@ -54,8 +57,22 @@ public class MacroGridAdapter extends RecyclerView.Adapter<MacroGridAdapter.Macr
     @Override
     public void onBindViewHolder(@NonNull MacroButtonViewHolder holder, int position) {
         KeyConfigHelper.Shortcut macro = macros.get(position);
-        holder.circle.setText(initialsOf(macro.name));
-        holder.label.setText(macro.name);
+
+        int iconRes = MacroIconCatalog.drawableFor(macro.icon);
+        if (iconRes != 0) {
+            holder.icon.setImageResource(iconRes);
+            holder.icon.setVisibility(View.VISIBLE);
+            holder.initials.setVisibility(View.GONE);
+        } else {
+            holder.icon.setVisibility(View.GONE);
+            holder.initials.setText(initialsOf(macro.name));
+            holder.initials.setVisibility(View.VISIBLE);
+        }
+
+        boolean named = macro.name != null && !macro.name.trim().isEmpty();
+        holder.label.setText(named ? macro.name : "");
+        holder.label.setVisibility(named ? View.VISIBLE : View.GONE);
+        holder.circle.setContentDescription(named ? macro.name : null);
 
         View.OnClickListener clickListener = v -> {
             if (listener != null) {
@@ -105,12 +122,16 @@ public class MacroGridAdapter extends RecyclerView.Adapter<MacroGridAdapter.Macr
     }
 
     static class MacroButtonViewHolder extends RecyclerView.ViewHolder {
-        final TextView circle;
+        final FrameLayout circle;
+        final TextView initials;
+        final ImageView icon;
         final TextView label;
 
         MacroButtonViewHolder(@NonNull View itemView) {
             super(itemView);
             circle = itemView.findViewById(R.id.macroCircle);
+            initials = itemView.findViewById(R.id.macroInitials);
+            icon = itemView.findViewById(R.id.macroIcon);
             label = itemView.findViewById(R.id.macroLabel);
         }
     }

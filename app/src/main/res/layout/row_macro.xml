@@ -7,6 +7,14 @@
     android:background="?android:attr/selectableItemBackground"
     android:gravity="center_vertical">
 
+    <ImageView
+        android:id="@+id/macroIcon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="@string/macro_icon_label"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"

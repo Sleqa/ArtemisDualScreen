@@ -1,11 +1,17 @@
 package com.limelight.dualscreen;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.GridLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,10 +31,15 @@ import java.util.UUID;
 public class EditMacroActivity extends AppCompatActivity {
     public static final String EXTRA_MACRO_ID = "macroId";
 
+    private static final int ICON_PICKER_COLUMNS = 5;
+
     private String macroId;
     private TextInputEditText nameInput;
     private ChipGroup selectedKeysChipGroup;
     private TextView noKeysSelectedText;
+    private ImageView iconPreview;
+    private TextView iconEmptyGlyph;
+    private String selectedIcon;
     private final List<String> selectedKeys = new ArrayList<>();
 
     @Override
@@ -45,12 +56,16 @@ public class EditMacroActivity extends AppCompatActivity {
         nameInput = findViewById(R.id.macroNameInput);
         selectedKeysChipGroup = findViewById(R.id.selectedKeysChipGroup);
         noKeysSelectedText = findViewById(R.id.noKeysSelectedText);
+        iconPreview = findViewById(R.id.macroIconPreview);
+        iconEmptyGlyph = findViewById(R.id.macroIconEmpty);
+        findViewById(R.id.macroIconPicker).setOnClickListener(v -> showIconPicker());
 
         macroId = getIntent().getStringExtra(EXTRA_MACRO_ID);
         if (macroId != null) {
             KeyConfigHelper.Shortcut existing = findMacro(macroId);
             if (existing != null) {
                 nameInput.setText(existing.name);
+                selectedIcon = existing.icon;
                 if (existing.keys != null) {
                     selectedKeys.addAll(existing.keys);
                 }
@@ -60,6 +75,7 @@ public class EditMacroActivity extends AppCompatActivity {
             setTitle(R.string.macro_new_macro);
         }
 
+        renderSelectedIcon();
         buildKeyPicker();
         renderSelectedKeys();
     }
@@ -74,6 +90,84 @@ public class EditMacroActivity extends AppCompatActivity {
             }
         }
         return null;
+    }
+
+    private void renderSelectedIcon() {
+        int iconRes = MacroIconCatalog.drawableFor(selectedIcon);
+        if (iconRes != 0) {
+            iconPreview.setImageResource(iconRes);
+            iconPreview.setVisibility(View.VISIBLE);
+            iconEmptyGlyph.setVisibility(View.GONE);
+        } else {
+            iconPreview.setVisibility(View.GONE);
+            iconEmptyGlyph.setVisibility(View.VISIBLE);
+        }
+    }
+
+    /**
+     * Grid of every bundled icon, with a "no icon" cell first. Picking one updates the preview
+     * immediately; the choice is only written to the macro file when the macro is saved.
+     */
+    private void showIconPicker() {
+        GridLayout grid = new GridLayout(this);
+        grid.setColumnCount(ICON_PICKER_COLUMNS);
+        int gridPadding = dpToPx(12);
+        grid.setPadding(gridPadding, gridPadding, gridPadding, gridPadding);
+
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.macro_icon_pick_title)
+                .setView(wrapInScrollView(grid))
+                .setNegativeButton(R.string.cancel, null)
+                .create();
+
+        grid.addView(buildIconCell(null, dialog));
+        for (String id : MacroIconCatalog.ids()) {
+            grid.addView(buildIconCell(id, dialog));
+        }
+
+        dialog.show();
+    }
+
+    private ScrollView wrapInScrollView(View content) {
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.addView(content, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return scrollView;
+    }
+
+    private View buildIconCell(final String iconId, final AlertDialog dialog) {
+        int cell = dpToPx(52);
+        int iconRes = MacroIconCatalog.drawableFor(iconId);
+
+        View view;
+        if (iconRes != 0) {
+            ImageView image = new ImageView(this);
+            image.setImageResource(iconRes);
+            image.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
+            view = image;
+        } else {
+            // "No icon" cell - the macro falls back to its initials
+            TextView none = new TextView(this);
+            none.setText(R.string.macro_icon_none_glyph);
+            none.setTextColor(0x99FFFFFF);
+            none.setTextSize(20);
+            none.setGravity(Gravity.CENTER);
+            view = none;
+        }
+
+        GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+        params.width = cell;
+        params.height = cell;
+        params.setMargins(dpToPx(2), dpToPx(2), dpToPx(2), dpToPx(2));
+        view.setLayoutParams(params);
+        view.setBackgroundResource(TextUtils.equals(iconId, selectedIcon)
+                ? R.drawable.bg_macro_circle : R.drawable.bg_macro_icon_cell);
+        view.setOnClickListener(v -> {
+            selectedIcon = iconId;
+            renderSelectedIcon();
+            dialog.dismiss();
+        });
+        return view;
     }
 
     private void buildKeyPicker() {
@@ -162,11 +256,8 @@ public class EditMacroActivity extends AppCompatActivity {
     }
 
     private void saveMacro() {
+        // The name is optional: a macro with an icon and no name shows just its key on the panel
         String name = nameInput.getText() != null ? nameInput.getText().toString().trim() : "";
-        if (name.isEmpty()) {
-            Toast.makeText(this, R.string.macro_name_cannot_be_blank, Toast.LENGTH_SHORT).show();
-            return;
-        }
         if (selectedKeys.isEmpty()) {
             Toast.makeText(this, R.string.macro_needs_at_least_one_key, Toast.LENGTH_SHORT).show();
             return;
@@ -179,6 +270,7 @@ public class EditMacroActivity extends AppCompatActivity {
 
         String id = macroId != null ? macroId : UUID.randomUUID().toString();
         KeyConfigHelper.Shortcut shortcut = new KeyConfigHelper.Shortcut(id, name, false, new ArrayList<>(selectedKeys));
+        shortcut.icon = selectedIcon;
 
         boolean replaced = false;
         for (int i = 0; i < file.data.size(); i++) {

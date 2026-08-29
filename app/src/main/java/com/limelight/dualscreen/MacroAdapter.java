@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -57,8 +58,15 @@ public class MacroAdapter extends RecyclerView.Adapter<MacroAdapter.MacroViewHol
     public void onBindViewHolder(@NonNull MacroViewHolder holder, int position) {
         KeyConfigHelper.Shortcut macro = macros.get(position);
 
-        holder.macroName.setText(macro.name);
+        boolean named = macro.name != null && !macro.name.trim().isEmpty();
+        holder.macroName.setText(named ? macro.name : context.getString(R.string.macro_unnamed));
         holder.macroKeysSummary.setText(formatKeysSummary(macro.keys));
+
+        int iconRes = MacroIconCatalog.drawableFor(macro.icon);
+        holder.macroIcon.setVisibility(iconRes != 0 ? View.VISIBLE : View.GONE);
+        if (iconRes != 0) {
+            holder.macroIcon.setImageResource(iconRes);
+        }
 
         holder.editMacro.setOnClickListener(v -> {
             Intent intent = new Intent(context, EditMacroActivity.class);
@@ -68,7 +76,8 @@ public class MacroAdapter extends RecyclerView.Adapter<MacroAdapter.MacroViewHol
 
         holder.deleteMacro.setOnClickListener(v -> new AlertDialog.Builder(context)
                 .setTitle(R.string.macro_delete_macro)
-                .setMessage(context.getString(R.string.macro_confirm_delete, macro.name))
+                .setMessage(context.getString(R.string.macro_confirm_delete,
+                        named ? macro.name : context.getString(R.string.macro_unnamed)))
                 .setPositiveButton(R.string.macro_delete, (dialog, which) -> {
                     deleteMacro(macro.id);
                     Toast.makeText(context, R.string.macro_deleted, Toast.LENGTH_SHORT).show();
@@ -117,6 +126,7 @@ public class MacroAdapter extends RecyclerView.Adapter<MacroAdapter.MacroViewHol
     }
 
     static class MacroViewHolder extends RecyclerView.ViewHolder {
+        ImageView macroIcon;
         TextView macroName;
         TextView macroKeysSummary;
         ImageButton editMacro;
@@ -124,6 +134,7 @@ public class MacroAdapter extends RecyclerView.Adapter<MacroAdapter.MacroViewHol
 
         MacroViewHolder(@NonNull View itemView) {
             super(itemView);
+            macroIcon = itemView.findViewById(R.id.macroIcon);
             macroName = itemView.findViewById(R.id.macroName);
             macroKeysSummary = itemView.findViewById(R.id.macroKeysSummary);
             editMacro = itemView.findViewById(R.id.editMacro);

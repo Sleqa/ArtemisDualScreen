@@ -4,7 +4,7 @@ This is a fork of [Artemis](https://github.com/ClassicOldSong/moonlight-android)
 
 **Goal:** the main screen behaves exactly like stock Artemis while streaming, while the device's secondary screen becomes a dedicated companion panel with:
 
-- A grid of compact circular macro keys (e.g. Alt+Tab, Ctrl+Shift+Esc) that you create and edit in-app
+- A grid of compact circular macro keys (e.g. Alt+Tab, Ctrl+Shift+Esc) that you create and edit in-app, each with an optional icon from a bundled 75-icon set and an optional name shown underneath
 - A reliable soft-keyboard toggle that forwards typed input straight into the stream
 - A trackpad mode that turns the second screen into a mouse trackpad for the host PC
 - An always-on column of ring gauges down the right edge: stream FPS, end-to-end latency (network + host processing + client decode, green under 10 ms, amber under 18 ms, then a deepening red, with the ring full at 100 ms), and the host PC's CPU, GPU and RAM load read live from a Vibepollo/Apollo host's web API
@@ -28,6 +28,13 @@ leave those three gauges blank. Vibepollo only serves its web API to the local n
 default, so streaming from outside the LAN additionally needs the host's
 `origin_web_ui_allowed` set to `wan` — think about whether you want that exposed before
 changing it.
+
+### Icons
+
+The macro icons are [Material Design Icons](https://pictogrammers.com/library/mdi/) by the
+Pictogrammers group, redistributed under the Apache License 2.0 — see
+[THIRD_PARTY_ICONS_LICENSE.txt](THIRD_PARTY_ICONS_LICENSE.txt). Only the subset used by the icon
+picker is bundled, converted to white Android vector drawables.
 
 > **Disclaimer:** The dual-screen features in this fork were built with AI assistance (Claude, via Claude Code). They've been tested on-device, but have not been reviewed by the upstream Artemis/Moonlight maintainers, and bugs may exist. Use at your own discretion, and please report issues on [this fork's repository](https://github.com/Sleqa/ArtemisDualScreen/issues) rather than upstream.
 

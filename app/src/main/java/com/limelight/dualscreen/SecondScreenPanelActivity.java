@@ -44,8 +44,6 @@ import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.ExternalControllerView;
 import com.limelight.utils.KeyConfigHelper;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -122,7 +120,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private TextView trackpadHint;
     private ImageButton trackpadButton;
     private ImageButton mouseModeButton;
-    private TextView statsOverlayText;
     private LinearLayout gaugeColumn;
     private GaugeView fpsGauge;
     private GaugeView latencyGauge;
@@ -131,8 +128,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private GaugeView ramGauge;
     private HostStatsPoller hostStatsPoller;
     private boolean trackpadEnabled = false;
-    private String latencyText;
-    private String hostStatsMessage;
+    private String lastHostStatsWarning;
     private final PerfOverlayListener panelPerfListener = this::onPerfTextUpdate;
     private boolean mouseModeOverridden = false;
     private int previousMouseMode = 0;
@@ -392,20 +388,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
 
         createGaugeColumn();
 
-        statsOverlayText = new TextView(this);
-        statsOverlayText.setTextColor(0xFFCCCCCC);
-        statsOverlayText.setTextSize(10);
-        statsOverlayText.setGravity(Gravity.CENTER_HORIZONTAL);
-        statsOverlayText.setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2));
-        FrameLayout.LayoutParams statsParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.START);
-        statsParams.topMargin = dpToPx(8);
-        statsParams.leftMargin = dpToPx(8);
-        statsOverlayText.setLayoutParams(statsParams);
-        rootLayout.addView(statsOverlayText);
-
-        // The readout is permanent, so the stats feeds start with the panel and only stop
+        // The gauges are permanent, so the stats feeds start with the panel and only stop
         // when it goes away.
         Game.instance.setSecondScreenPerfListener(panelPerfListener);
         startHostStatsPolling();
@@ -506,7 +489,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     }
 
     private void applyHostStats(HostStats stats) {
-        hostStatsMessage = null;
+        lastHostStatsWarning = null;
         if (stats.hasCpu()) {
             cpuGauge.setReading(String.format(Locale.getDefault(), "%.0f", stats.cpuPercent),
                     getString(R.string.second_screen_gauge_unit_percent), stats.cpuPercent / 100f);
@@ -525,7 +508,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         } else {
             ramGauge.clearReading();
         }
-        refreshStatsText();
     }
 
     private void clearHostGauges() {
@@ -534,16 +516,21 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         ramGauge.clearReading();
     }
 
+    /**
+     * The host gauges simply go blank when the host can't be read; the reason is worth saying
+     * once (bad credentials, a host without the stats API) but not on every failed poll.
+     */
     private void showHostStatsUnavailable(String reason) {
         clearHostGauges();
-        hostStatsMessage = getString(R.string.second_screen_host_stats_unavailable, reason);
-        refreshStatsText();
+        if (!TextUtils.equals(reason, lastHostStatsWarning)) {
+            lastHostStatsWarning = reason;
+            Toast.makeText(this, getString(R.string.second_screen_host_stats_unavailable, reason),
+                    Toast.LENGTH_LONG).show();
+        }
     }
 
     // Called on the UI thread (Game.onPerfUpdate dispatches via runOnUiThread)
     private void onPerfTextUpdate(String text) {
-        latencyText = simplifyPerfText(text);
-
         float fps = parseFloatOrDefault(parseFps(text), -1f);
         if (fps >= 0f) {
             float target = prefConfig.fps > 0 ? prefConfig.fps : 60f;
@@ -553,7 +540,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         }
 
         updateLatencyGauge(text);
-        refreshStatsText();
     }
 
     /**
@@ -610,99 +596,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         int g = Math.round(Color.green(from) + (Color.green(to) - Color.green(from)) * t);
         int b = Math.round(Color.blue(from) + (Color.blue(to) - Color.blue(from)) * t);
         return Color.argb(255, r, g, b);
-    }
-
-    private void refreshStatsText() {
-        if (statsOverlayText == null) {
-            return;
-        }
-        if (hostStatsMessage != null && !hostStatsMessage.isEmpty()) {
-            statsOverlayText.setText(latencyText == null || latencyText.isEmpty()
-                    ? hostStatsMessage : latencyText + "\n" + hostStatsMessage);
-        } else {
-            statsOverlayText.setText(latencyText != null ? latencyText : "");
-        }
-    }
-
-    /**
-     * Pulls the frame rate out of the HUD text, which formats it either as part of the full
-     * overlay's stream line ("Video stream: 1920x1080 119.94 FPS") or at the end of the lite
-     * overlay's single line ("FPS：119.94").
-     */
-    private String parseFps(String text) {
-        String streamLine = findLine(text.split("\n"), prefixOf(R.string.perf_overlay_streamdetails));
-        String fps = matchGroup(streamLine, "x\\d+\\s+([\\d.,]+)");
-        if (fps == null) {
-            // Lite HUD: the frame rate is the trailing "FPS：119.94" field. This has to be tried
-            // before the loose pattern below, which would otherwise latch onto the packet-loss
-            // percentage that immediately precedes the "FPS" label.
-            fps = matchGroup(text, "FPS[:：]\\s*([\\d.,]+)");
-        }
-        if (fps == null) {
-            fps = matchGroup(text, "([\\d.,]+)\\s*FPS");
-        }
-        return fps;
-    }
-
-    private float parseFloatOrDefault(String value, float fallback) {
-        if (value == null) {
-            return fallback;
-        }
-        try {
-            // The HUD formats its numbers for the device locale, so a decimal comma is possible
-            return Float.parseFloat(value.replace(',', '.'));
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
-    }
-
-    /**
-     * Condenses the multi-line HUD text into a single compact line:
-     *   1920x1080 · Net 5 ms · Host 0.8 ms · Decode 1.2 ms
-     * (the frame rate is left out here because it has its own gauge)
-     * where Host is the host-side processing latency (only reported by Sunshine/Apollo
-     * hosts) and Decode is the client-side decode time. Values are pulled from the HUD
-     * lines located via their string-resource prefixes; if parsing fails the raw text is
-     * shown unmodified. The lite-HUD format is a single compact line already and passes
-     * through as-is.
-     */
-    private String simplifyPerfText(String text) {
-        if (!text.contains("\n")) {
-            return text;
-        }
-        String[] lines = text.split("\n");
-        String streamLine = findLine(lines, prefixOf(R.string.perf_overlay_streamdetails));
-        String netLine = findLine(lines, prefixOf(R.string.perf_overlay_netlatency));
-        String hostLine = findLine(lines, prefixOf(R.string.perf_overlay_hostprocessinglatency));
-        String decodeLine = findLine(lines, prefixOf(R.string.perf_overlay_dectime));
-
-        String resolution = matchGroup(streamLine, "(\\d+x\\d+)");
-        String netMs = matchGroup(netLine, "(\\d+)");
-        String hostMs = matchGroup(hostLine, "[\\d.,]+/[\\d.,]+/([\\d.,]+)");
-        String decodeMs = matchGroup(decodeLine, "([\\d.,]+)");
-
-        // The frame rate has its own gauge above this line, so only the resolution is repeated here
-        StringBuilder sb = new StringBuilder();
-        if (resolution != null) {
-            sb.append(resolution);
-        }
-        List<String> latencyParts = new ArrayList<>();
-        if (netMs != null) {
-            latencyParts.add(getString(R.string.second_screen_stats_net, netMs));
-        }
-        if (hostMs != null) {
-            latencyParts.add(getString(R.string.second_screen_stats_host, hostMs));
-        }
-        if (decodeMs != null) {
-            latencyParts.add(getString(R.string.second_screen_stats_decode, decodeMs));
-        }
-        if (!latencyParts.isEmpty()) {
-            if (sb.length() > 0) {
-                sb.append(" · ");
-            }
-            sb.append(TextUtils.join(" · ", latencyParts));
-        }
-        return sb.length() > 0 ? sb.toString() : text;
     }
 
     private String findLine(String[] lines, String prefix) {
