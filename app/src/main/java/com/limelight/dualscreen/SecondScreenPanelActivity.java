@@ -598,6 +598,38 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         return Color.argb(255, r, g, b);
     }
 
+    /**
+     * Pulls the frame rate out of the HUD text, which formats it either as part of the full
+     * overlay's stream line ("Video stream: 1920x1080 119.94 FPS") or at the end of the lite
+     * overlay's single line ("FPS\uFF1A119.94").
+     */
+    private String parseFps(String text) {
+        String streamLine = findLine(text.split("\n"), prefixOf(R.string.perf_overlay_streamdetails));
+        String fps = matchGroup(streamLine, "x\\d+\\s+([\\d.,]+)");
+        if (fps == null) {
+            // Lite HUD: the frame rate is the trailing "FPS\uFF1A119.94" field. This has to be tried
+            // before the loose pattern below, which would otherwise latch onto the packet-loss
+            // percentage that immediately precedes the "FPS" label.
+            fps = matchGroup(text, "FPS[:\uFF1A]\\s*([\\d.,]+)");
+        }
+        if (fps == null) {
+            fps = matchGroup(text, "([\\d.,]+)\\s*FPS");
+        }
+        return fps;
+    }
+
+    private float parseFloatOrDefault(String value, float fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            // The HUD formats its numbers for the device locale, so a decimal comma is possible
+            return Float.parseFloat(value.replace(',', '.'));
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
     private String findLine(String[] lines, String prefix) {
         if (prefix.isEmpty()) {
             return null;
