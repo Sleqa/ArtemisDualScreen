@@ -45,17 +45,30 @@ import com.limelight.utils.KeyConfigHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Companion panel shown on a built-in secondary screen (e.g. AYN Thor) while a stream is active
  * on the main screen. Offers a soft-keyboard toggle (forwarding typed text into the live stream
- * via {@link ExternalControllerView}'s IME bridge) and a grid of tappable macro buttons.
+ * via {@link ExternalControllerView}'s IME bridge), a grid of tappable macro keys, a trackpad
+ * mode, and a row of ring gauges showing stream FPS plus the host PC's CPU/GPU/RAM load.
  */
 public class SecondScreenPanelActivity extends AppCompatActivity {
 
-    private static final int DESIRED_MACRO_BUTTON_WIDTH_DP = 140;
+    private static final int DESIRED_MACRO_BUTTON_WIDTH_DP = 84;
+
+    // Gauge row geometry (see createGaugeRow)
+    private static final int GAUGE_SIZE_DP = 78;
+    private static final int GAUGE_ROW_TOP_MARGIN_DP = 60;
+    private static final int MACRO_GRID_TOP_MARGIN_DP = 72;
+    private static final int MACRO_GRID_TOP_MARGIN_WITH_GAUGES_DP = 172;
+
+    private static final int COLOR_FPS = 0xFFB14AE8;
+    private static final int COLOR_CPU = 0xFFFF2D6F;
+    private static final int COLOR_GPU = 0xFF38B6FF;
+    private static final int COLOR_RAM = 0xFF35D07F;
 
     /**
      * Panel root view that always acts as an IME target. When the commit-text pref is off,
@@ -98,8 +111,16 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private ImageButton mouseModeButton;
     private ImageButton statsButton;
     private TextView statsOverlayText;
+    private LinearLayout gaugeRow;
+    private GaugeView fpsGauge;
+    private GaugeView cpuGauge;
+    private GaugeView gpuGauge;
+    private GaugeView ramGauge;
+    private HostStatsPoller hostStatsPoller;
     private boolean trackpadEnabled = false;
     private boolean statsEnabled = false;
+    private String latencyText;
+    private String hostStatsMessage;
     private final PerfOverlayListener panelPerfListener = this::onPerfTextUpdate;
     private boolean mouseModeOverridden = false;
     private int previousMouseMode = 0;
@@ -160,12 +181,17 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
                 return;
             }
             refreshMacros();
+            if (statsEnabled && hostStatsPoller == null) {
+                startHostStatsPolling();
+            }
         }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        // Nothing on this screen is visible while it's backgrounded, so stop polling the host
+        stopHostStatsPolling();
         if (macroGridAdapter != null && Game.instance == null) {
             finish();
         }
@@ -174,6 +200,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopHostStatsPolling();
         if (Game.instance != null) {
             Game.instance.setSecondScreenPerfListener(null);
         }
@@ -313,7 +340,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         macroRecyclerView = new RecyclerView(this);
         FrameLayout.LayoutParams gridParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        gridParams.topMargin = dpToPx(72);
+        gridParams.topMargin = dpToPx(MACRO_GRID_TOP_MARGIN_DP);
         gridParams.bottomMargin = dpToPx(72);
         gridParams.leftMargin = dpToPx(8);
         gridParams.rightMargin = dpToPx(8);
@@ -358,24 +385,62 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         trackpadHint.setVisibility(View.GONE);
         rootLayout.addView(trackpadHint);
 
+        createGaugeRow();
+
         statsOverlayText = new TextView(this);
         statsOverlayText.setTextColor(0xFFCCCCCC);
-        statsOverlayText.setTextSize(11);
+        statsOverlayText.setTextSize(10);
         statsOverlayText.setGravity(Gravity.CENTER_HORIZONTAL);
-        statsOverlayText.setBackgroundColor(0x80000000);
-        statsOverlayText.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
+        statsOverlayText.setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2));
         FrameLayout.LayoutParams statsParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        statsParams.topMargin = dpToPx(8);
+        statsParams.topMargin = dpToPx(GAUGE_ROW_TOP_MARGIN_DP + GAUGE_SIZE_DP + 4);
         statsOverlayText.setLayoutParams(statsParams);
         statsOverlayText.setVisibility(View.GONE);
         rootLayout.addView(statsOverlayText);
     }
 
     /**
-     * Shows a simplified performance readout (FPS, decoder, network latency, decode time)
-     * on this screen, fed by the same decoder stats string as the main-screen HUD.
+     * Builds the row of ring gauges shown above the macro grid: stream FPS measured on this
+     * device, plus the host PC's CPU, GPU and RAM load read from Vibepollo's web API.
+     */
+    private void createGaugeRow() {
+        gaugeRow = new LinearLayout(this);
+        gaugeRow.setOrientation(LinearLayout.HORIZONTAL);
+        gaugeRow.setGravity(Gravity.CENTER);
+        gaugeRow.setFocusable(false);
+        FrameLayout.LayoutParams rowParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(GAUGE_SIZE_DP),
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        rowParams.topMargin = dpToPx(GAUGE_ROW_TOP_MARGIN_DP);
+        gaugeRow.setLayoutParams(rowParams);
+        gaugeRow.setVisibility(View.GONE);
+
+        fpsGauge = addGauge(getString(R.string.second_screen_gauge_fps), COLOR_FPS);
+        cpuGauge = addGauge(getString(R.string.second_screen_gauge_cpu), COLOR_CPU);
+        gpuGauge = addGauge(getString(R.string.second_screen_gauge_gpu), COLOR_GPU);
+        ramGauge = addGauge(getString(R.string.second_screen_gauge_ram), COLOR_RAM);
+
+        rootLayout.addView(gaugeRow);
+    }
+
+    private GaugeView addGauge(String label, int accentColor) {
+        GaugeView gauge = new GaugeView(this);
+        gauge.setLabel(label);
+        gauge.setAccentColor(accentColor);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                dpToPx(GAUGE_SIZE_DP), dpToPx(GAUGE_SIZE_DP));
+        params.setMargins(dpToPx(4), 0, dpToPx(4), 0);
+        gauge.setLayoutParams(params);
+        gaugeRow.addView(gauge);
+        return gauge;
+    }
+
+    /**
+     * Shows the performance readout on this screen: ring gauges for stream FPS (measured by the
+     * client's decoder, same source as the main-screen HUD) and for the host PC's CPU, GPU and
+     * RAM load, plus a compact latency line underneath.
      */
     private void toggleStatsOverlay() {
         if (Game.instance == null) {
@@ -384,26 +449,183 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         statsEnabled = !statsEnabled;
         statsButton.setAlpha(statsEnabled ? 1.0f : 0.5f);
         if (statsEnabled) {
+            latencyText = null;
+            hostStatsMessage = null;
             statsOverlayText.setText("");
             statsOverlayText.setVisibility(View.VISIBLE);
+            gaugeRow.setVisibility(View.VISIBLE);
+            fpsGauge.clearReading();
+            clearHostGauges();
             Game.instance.setSecondScreenPerfListener(panelPerfListener);
+            startHostStatsPolling();
         } else {
             statsOverlayText.setVisibility(View.GONE);
+            gaugeRow.setVisibility(View.GONE);
             Game.instance.setSecondScreenPerfListener(null);
+            stopHostStatsPolling();
         }
+        updateMacroGridMargin();
+    }
+
+    /** Keeps the macro grid clear of the gauge row while stats are on screen. */
+    private void updateMacroGridMargin() {
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) macroRecyclerView.getLayoutParams();
+        params.topMargin = dpToPx(statsEnabled
+                ? MACRO_GRID_TOP_MARGIN_WITH_GAUGES_DP : MACRO_GRID_TOP_MARGIN_DP);
+        macroRecyclerView.setLayoutParams(params);
+    }
+
+    /**
+     * Starts polling the host's Vibepollo web API for its CPU/GPU/RAM counters. Requires the
+     * host credentials to be configured in settings; without them the host gauges stay blank
+     * and only the client-measured FPS is shown.
+     */
+    private void startHostStatsPolling() {
+        stopHostStatsPolling();
+        if (Game.instance == null) {
+            return;
+        }
+        String host = Game.instance.getHostAddress();
+        if (host == null) {
+            return;
+        }
+        if (!HostStatsPoller.hasCredentials(prefConfig.hostStatsUsername, prefConfig.hostStatsToken)) {
+            showHostStatsUnavailable(getString(R.string.second_screen_host_stats_no_credentials));
+            return;
+        }
+        // The web interface listens one port above the stream's HTTP port unless overridden
+        int webPort = prefConfig.hostStatsPort > 0
+                ? prefConfig.hostStatsPort : Game.instance.getHostPort() + 1;
+        hostStatsPoller = new HostStatsPoller(host, webPort, Game.instance.getServerCert(),
+                prefConfig.hostStatsUsername, prefConfig.hostStatsPassword, prefConfig.hostStatsToken,
+                new HostStatsPoller.Listener() {
+                    @Override
+                    public void onHostStats(HostStats stats) {
+                        applyHostStats(stats);
+                    }
+
+                    @Override
+                    public void onHostStatsUnavailable(String reason) {
+                        if (reason != null) {
+                            showHostStatsUnavailable(reason);
+                        }
+                    }
+                });
+        hostStatsPoller.start();
+    }
+
+    private void stopHostStatsPolling() {
+        if (hostStatsPoller != null) {
+            hostStatsPoller.stop();
+            hostStatsPoller = null;
+        }
+    }
+
+    private void applyHostStats(HostStats stats) {
+        if (!statsEnabled) {
+            return;
+        }
+        hostStatsMessage = null;
+        if (stats.hasCpu()) {
+            cpuGauge.setReading(String.format(Locale.getDefault(), "%.0f", stats.cpuPercent),
+                    getString(R.string.second_screen_gauge_unit_percent), stats.cpuPercent / 100f);
+        } else {
+            cpuGauge.clearReading();
+        }
+        if (stats.hasGpu()) {
+            gpuGauge.setReading(String.format(Locale.getDefault(), "%.0f", stats.gpuPercent),
+                    getString(R.string.second_screen_gauge_unit_percent), stats.gpuPercent / 100f);
+        } else {
+            gpuGauge.clearReading();
+        }
+        if (stats.hasRam()) {
+            ramGauge.setReading(String.format(Locale.getDefault(), "%.1f", stats.ramUsedGb()),
+                    getString(R.string.second_screen_gauge_unit_gb), stats.ramFraction());
+        } else {
+            ramGauge.clearReading();
+        }
+        refreshStatsText();
+    }
+
+    private void clearHostGauges() {
+        cpuGauge.clearReading();
+        gpuGauge.clearReading();
+        ramGauge.clearReading();
+    }
+
+    private void showHostStatsUnavailable(String reason) {
+        if (!statsEnabled) {
+            return;
+        }
+        clearHostGauges();
+        hostStatsMessage = getString(R.string.second_screen_host_stats_unavailable, reason);
+        refreshStatsText();
     }
 
     // Called on the UI thread (Game.onPerfUpdate dispatches via runOnUiThread)
     private void onPerfTextUpdate(String text) {
-        if (statsEnabled && statsOverlayText != null) {
-            statsOverlayText.setText(simplifyPerfText(text));
+        if (!statsEnabled) {
+            return;
+        }
+        latencyText = simplifyPerfText(text);
+        float fps = parseFloatOrDefault(parseFps(text), -1f);
+        if (fps >= 0f) {
+            float target = prefConfig.fps > 0 ? prefConfig.fps : 60f;
+            fpsGauge.setReading(String.format(Locale.getDefault(), "%.0f", fps), null, fps / target);
+        } else {
+            fpsGauge.clearReading();
+        }
+        refreshStatsText();
+    }
+
+    private void refreshStatsText() {
+        if (statsOverlayText == null) {
+            return;
+        }
+        if (hostStatsMessage != null && !hostStatsMessage.isEmpty()) {
+            statsOverlayText.setText(latencyText == null || latencyText.isEmpty()
+                    ? hostStatsMessage : latencyText + "\n" + hostStatsMessage);
+        } else {
+            statsOverlayText.setText(latencyText != null ? latencyText : "");
         }
     }
 
     /**
-     * Condenses the multi-line HUD text into a compact two-line readout:
-     *   1920x1080 · 119.9 FPS
-     *   Net 5 ms · Host 0.8 ms · Decode 1.2 ms
+     * Pulls the frame rate out of the HUD text, which formats it either as part of the full
+     * overlay's stream line ("Video stream: 1920x1080 119.94 FPS") or at the end of the lite
+     * overlay's single line ("FPS：119.94").
+     */
+    private String parseFps(String text) {
+        String streamLine = findLine(text.split("\n"), prefixOf(R.string.perf_overlay_streamdetails));
+        String fps = matchGroup(streamLine, "x\\d+\\s+([\\d.,]+)");
+        if (fps == null) {
+            // Lite HUD: the frame rate is the trailing "FPS：119.94" field. This has to be tried
+            // before the loose pattern below, which would otherwise latch onto the packet-loss
+            // percentage that immediately precedes the "FPS" label.
+            fps = matchGroup(text, "FPS[:：]\\s*([\\d.,]+)");
+        }
+        if (fps == null) {
+            fps = matchGroup(text, "([\\d.,]+)\\s*FPS");
+        }
+        return fps;
+    }
+
+    private float parseFloatOrDefault(String value, float fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            // The HUD formats its numbers for the device locale, so a decimal comma is possible
+            return Float.parseFloat(value.replace(',', '.'));
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    /**
+     * Condenses the multi-line HUD text into a single compact line:
+     *   1920x1080 · Net 5 ms · Host 0.8 ms · Decode 1.2 ms
+     * (the frame rate is left out here because it has its own gauge)
      * where Host is the host-side processing latency (only reported by Sunshine/Apollo
      * hosts) and Decode is the client-side decode time. Values are pulled from the HUD
      * lines located via their string-resource prefixes; if parsing fails the raw text is
@@ -421,14 +643,14 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         String decodeLine = findLine(lines, prefixOf(R.string.perf_overlay_dectime));
 
         String resolution = matchGroup(streamLine, "(\\d+x\\d+)");
-        String fps = matchGroup(streamLine, "x\\d+\\s+([\\d.,]+)");
         String netMs = matchGroup(netLine, "(\\d+)");
         String hostMs = matchGroup(hostLine, "[\\d.,]+/[\\d.,]+/([\\d.,]+)");
         String decodeMs = matchGroup(decodeLine, "([\\d.,]+)");
 
+        // The frame rate has its own gauge above this line, so only the resolution is repeated here
         StringBuilder sb = new StringBuilder();
-        if (resolution != null && fps != null) {
-            sb.append(getString(R.string.second_screen_stats_stream, resolution, fps));
+        if (resolution != null) {
+            sb.append(resolution);
         }
         List<String> latencyParts = new ArrayList<>();
         if (netMs != null) {
@@ -442,7 +664,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         }
         if (!latencyParts.isEmpty()) {
             if (sb.length() > 0) {
-                sb.append('\n');
+                sb.append(" · ");
             }
             sb.append(TextUtils.join(" · ", latencyParts));
         }

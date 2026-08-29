@@ -3933,6 +3933,20 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private PerfOverlayListener secondScreenPerfListener;
     private boolean perfOverlayForcedBySecondScreen = false;
 
+    // Connection details the second-screen panel needs to reach the host's web API for
+    // host-side performance counters (the web UI is served with this same certificate).
+    public String getHostAddress() {
+        return host;
+    }
+
+    public int getHostPort() {
+        return port;
+    }
+
+    public X509Certificate getServerCert() {
+        return serverCert;
+    }
+
     public void setSecondScreenPerfListener(PerfOverlayListener listener) {
         secondScreenPerfListener = listener;
         if (listener != null) {

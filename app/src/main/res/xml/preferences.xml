@@ -224,6 +224,42 @@
             android:summary="@string/summary_second_screen_panel_mode"
             android:title="@string/title_second_screen_panel_mode"
             app:iconSpaceReserved="false" />
+
+        <EditTextPreference
+            android:defaultValue=""
+            android:dialogMessage="@string/dialog_host_stats_username"
+            android:key="edit_host_stats_username"
+            android:singleLine="true"
+            android:summary="@string/summary_host_stats_username"
+            android:title="@string/title_host_stats_username"
+            app:iconSpaceReserved="false" />
+
+        <EditTextPreference
+            android:defaultValue=""
+            android:dialogMessage="@string/dialog_host_stats_password"
+            android:key="edit_host_stats_password"
+            android:singleLine="true"
+            android:summary="@string/summary_host_stats_password"
+            android:title="@string/title_host_stats_password"
+            app:iconSpaceReserved="false" />
+
+        <EditTextPreference
+            android:defaultValue=""
+            android:dialogMessage="@string/dialog_host_stats_token"
+            android:key="edit_host_stats_token"
+            android:singleLine="true"
+            android:summary="@string/summary_host_stats_token"
+            android:title="@string/title_host_stats_token"
+            app:iconSpaceReserved="false" />
+
+        <EditTextPreference
+            android:defaultValue="0"
+            android:dialogMessage="@string/dialog_host_stats_port"
+            android:key="edit_host_stats_port"
+            android:singleLine="true"
+            android:summary="@string/summary_host_stats_port"
+            android:title="@string/title_host_stats_port"
+            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
     <PreferenceCategory

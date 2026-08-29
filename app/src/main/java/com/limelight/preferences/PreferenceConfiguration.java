@@ -306,6 +306,14 @@ public class PreferenceConfiguration {
     // while streaming, alongside the normal stream on the main screen.
     public boolean enableSecondScreenPanel;
 
+    // Credentials for the host's Vibepollo/Apollo web API, used by the second-screen panel to
+    // read the host PC's CPU/GPU/RAM load. A scoped API token takes precedence over the
+    // username/password pair. Port 0 means "the stream's port + 1", the web UI default.
+    public String hostStatsUsername;
+    public String hostStatsPassword;
+    public String hostStatsToken;
+    public int hostStatsPort;
+
     //触控屏幕灵敏度
     public int touchSensitivityX;
     public int touchSensitivityY;
@@ -972,6 +980,15 @@ private static int getFramePacingValue(Context context) {
         config.alignDisplayTopCenter =prefs.getBoolean("checkbox_enable_view_top_center",false);
 
         config.enableSecondScreenPanel = prefs.getBoolean("checkbox_enable_second_screen_panel", false);
+
+        config.hostStatsUsername = prefs.getString("edit_host_stats_username", "");
+        config.hostStatsPassword = prefs.getString("edit_host_stats_password", "");
+        config.hostStatsToken = prefs.getString("edit_host_stats_token", "");
+        try {
+            config.hostStatsPort = Integer.parseInt(prefs.getString("edit_host_stats_port", "0").trim());
+        } catch (NumberFormatException e) {
+            config.hostStatsPort = 0;
+        }
 
         config.touchSensitivityX =prefs.getInt(SEEKBAR_TOUCH_SENSITIVITY,100);
 

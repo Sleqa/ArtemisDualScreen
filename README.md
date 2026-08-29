@@ -4,11 +4,30 @@ This is a fork of [Artemis](https://github.com/ClassicOldSong/moonlight-android)
 
 **Goal:** the main screen behaves exactly like stock Artemis while streaming, while the device's secondary screen becomes a dedicated companion panel with:
 
-- A grid of custom macro buttons (e.g. Alt+Tab, Ctrl+Shift+Esc) that you create and edit in-app
+- A grid of compact circular macro keys (e.g. Alt+Tab, Ctrl+Shift+Esc) that you create and edit in-app
 - A reliable soft-keyboard toggle that forwards typed input straight into the stream
 - A trackpad mode that turns the second screen into a mouse trackpad for the host PC
-- A simplified performance overlay (resolution/FPS, network latency, host + client decode time)
+- Ring gauges for stream FPS and the host PC's CPU, GPU and RAM load, read live from a Vibepollo/Apollo host's web API, with a compact latency line (network, host processing, client decode)
 - A swipe-up-to-quit handle to end the session without touching the main screen
+
+### Host performance gauges
+
+The FPS gauge is measured on the device and needs no setup. The CPU, GPU and RAM gauges read the
+host PC's counters from Vibepollo's (or Apollo's) web API — `GET /api/host/stats` on the web
+interface port — which requires credentials. In the app's settings, under the second-screen
+options, enter either:
+
+- your Vibepollo web interface **username and password**, or
+- a **scoped API token** (a token limited to `GET /api/host/stats` is enough, and is the safer
+  option since it grants nothing else)
+
+The port defaults to the stream's port + 1 (47990 on a default install) and can be overridden.
+The connection is pinned to the same certificate the stream is paired with, so nothing is sent
+anywhere but the paired host. Hosts without that endpoint (older Sunshine, for example) simply
+leave those three gauges blank. Vibepollo only serves its web API to the local network by
+default, so streaming from outside the LAN additionally needs the host's
+`origin_web_ui_allowed` set to `wan` — think about whether you want that exposed before
+changing it.
 
 > **Disclaimer:** The dual-screen features in this fork were built with AI assistance (Claude, via Claude Code). They've been tested on-device, but have not been reviewed by the upstream Artemis/Moonlight maintainers, and bugs may exist. Use at your own discretion, and please report issues on [this fork's repository](https://github.com/Sleqa/ArtemisDualScreen/issues) rather than upstream.
 

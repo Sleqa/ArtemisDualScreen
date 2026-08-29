@@ -532,6 +532,26 @@
     <string name="second_screen_stats_net">Net %1$s ms</string>
     <string name="second_screen_stats_host">Host %1$s ms</string>
     <string name="second_screen_stats_decode">Decode %1$s ms</string>
+    <string name="second_screen_gauge_fps">FPS</string>
+    <string name="second_screen_gauge_cpu">CPU</string>
+    <string name="second_screen_gauge_gpu">GPU</string>
+    <string name="second_screen_gauge_ram">RAM</string>
+    <string name="second_screen_gauge_unit_percent">%</string>
+    <string name="second_screen_gauge_unit_gb">GB</string>
+    <string name="second_screen_host_stats_unavailable">Host stats: %1$s</string>
+    <string name="second_screen_host_stats_no_credentials">add web login in settings</string>
+    <string name="title_host_stats_username">Vibepollo web username</string>
+    <string name="summary_host_stats_username">Username for the host\'s Vibepollo/Apollo web interface. Needed for the second-screen panel to show the host PC\'s CPU, GPU and RAM load.</string>
+    <string name="dialog_host_stats_username">Web interface username</string>
+    <string name="title_host_stats_password">Vibepollo web password</string>
+    <string name="summary_host_stats_password">Password for the host\'s web interface. Stored on this device only, and sent solely to the paired host.</string>
+    <string name="dialog_host_stats_password">Web interface password</string>
+    <string name="title_host_stats_token">Vibepollo API token (optional)</string>
+    <string name="summary_host_stats_token">Use a scoped API token instead of a username and password. A token limited to GET /api/host/stats is enough.</string>
+    <string name="dialog_host_stats_token">API token</string>
+    <string name="title_host_stats_port">Vibepollo web port</string>
+    <string name="summary_host_stats_port">Port of the host\'s web interface. 0 uses the stream port + 1 (47990 by default).</string>
+    <string name="dialog_host_stats_port">Web interface port (0 = automatic)</string>
     <string name="title_top_center_display">Display in Top Center</string>
     <string name="summary_top_center_display">Streaming picture will be aligned to the top of the screen instead of centered when resolution is not native.</string>
     <string name="title_touch_sensitivity">Touch Screen Sensitivity</string>
