@@ -533,11 +533,13 @@
     <string name="second_screen_stats_host">Host %1$s ms</string>
     <string name="second_screen_stats_decode">Decode %1$s ms</string>
     <string name="second_screen_gauge_fps">FPS</string>
+    <string name="second_screen_gauge_latency">LAT</string>
     <string name="second_screen_gauge_cpu">CPU</string>
     <string name="second_screen_gauge_gpu">GPU</string>
     <string name="second_screen_gauge_ram">RAM</string>
     <string name="second_screen_gauge_unit_percent">%</string>
     <string name="second_screen_gauge_unit_gb">GB</string>
+    <string name="second_screen_gauge_unit_ms">ms</string>
     <string name="second_screen_host_stats_unavailable">Host stats: %1$s</string>
     <string name="second_screen_host_stats_no_credentials">add web login in settings</string>
     <string name="title_host_stats_username">Vibepollo web username</string>

@@ -54,25 +54,34 @@ import java.util.regex.Pattern;
  * Companion panel shown on a built-in secondary screen (e.g. AYN Thor) while a stream is active
  * on the main screen. Offers a soft-keyboard toggle (forwarding typed text into the live stream
  * via {@link ExternalControllerView}'s IME bridge), a grid of tappable macro keys, a trackpad
- * mode, and a row of ring gauges showing stream FPS plus the host PC's CPU/GPU/RAM load.
+ * mode, and a permanent column of ring gauges down the right edge showing stream FPS, end-to-end
+ * latency, and the host PC's CPU/GPU/RAM load.
  */
 public class SecondScreenPanelActivity extends AppCompatActivity {
 
     private static final int DESIRED_MACRO_BUTTON_WIDTH_DP = 84;
 
-    // Gauge row geometry (see createGaugeRow)
-    private static final int GAUGE_SIZE_DP = 72;
-    private static final int GAUGE_ROW_PADDING_DP = 8;
-    private static final int GAUGE_ROW_TOP_MARGIN_DP = 60;
-    private static final int GAUGE_ROW_HEIGHT_DP = GAUGE_SIZE_DP + GAUGE_ROW_PADDING_DP * 2;
+    // Gauge column geometry (see createGaugeColumn)
+    private static final int GAUGE_SIZE_DP = 56;
+    private static final int GAUGE_COLUMN_PADDING_DP = 6;
+    private static final int GAUGE_SPACING_DP = 4;
+    private static final int GAUGE_COLUMN_WIDTH_DP = GAUGE_SIZE_DP + GAUGE_COLUMN_PADDING_DP * 2;
     private static final int MACRO_GRID_TOP_MARGIN_DP = 72;
-    private static final int MACRO_GRID_TOP_MARGIN_WITH_GAUGES_DP =
-            GAUGE_ROW_TOP_MARGIN_DP + GAUGE_ROW_HEIGHT_DP + 30;
 
     private static final int COLOR_FPS = 0xFFB14AE8;
     private static final int COLOR_CPU = 0xFFFF2D6F;
     private static final int COLOR_GPU = 0xFF38B6FF;
     private static final int COLOR_RAM = 0xFF35D07F;
+
+    // Latency gauge banding: green while the round trip is comfortable, amber as it slips,
+    // then red darkening toward the 100 ms point where the ring is full.
+    private static final float LATENCY_GOOD_MS = 10f;
+    private static final float LATENCY_FAIR_MS = 18f;
+    private static final float LATENCY_FULL_MS = 100f;
+    private static final int COLOR_LATENCY_GOOD = 0xFF35D07F;
+    private static final int COLOR_LATENCY_FAIR = 0xFFFFB02E;
+    private static final int COLOR_LATENCY_BAD = 0xFFFF3B30;
+    private static final int COLOR_LATENCY_WORST = 0xFF6E0A0A;
 
     /**
      * Panel root view that always acts as an IME target. When the commit-text pref is off,
@@ -113,16 +122,15 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private TextView trackpadHint;
     private ImageButton trackpadButton;
     private ImageButton mouseModeButton;
-    private ImageButton statsButton;
     private TextView statsOverlayText;
-    private LinearLayout gaugeRow;
+    private LinearLayout gaugeColumn;
     private GaugeView fpsGauge;
+    private GaugeView latencyGauge;
     private GaugeView cpuGauge;
     private GaugeView gpuGauge;
     private GaugeView ramGauge;
     private HostStatsPoller hostStatsPoller;
     private boolean trackpadEnabled = false;
-    private boolean statsEnabled = false;
     private String latencyText;
     private String hostStatsMessage;
     private final PerfOverlayListener panelPerfListener = this::onPerfTextUpdate;
@@ -185,7 +193,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
                 return;
             }
             refreshMacros();
-            if (statsEnabled && hostStatsPoller == null) {
+            if (hostStatsPoller == null) {
                 startHostStatsPolling();
             }
         }
@@ -275,14 +283,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         rootLayout.setClipToPadding(false);
         setContentView(rootLayout);
 
-        // Top-left: performance stats toggle
-        LinearLayout topLeftBar = createButtonContainer(Gravity.TOP | Gravity.START);
-        topLeftBar.setFocusable(false);
-        statsButton = createImageButton(R.drawable.ic_stats, v -> toggleStatsOverlay());
-        statsButton.setAlpha(0.5f);
-        topLeftBar.addView(statsButton);
-        rootLayout.addView(topLeftBar);
-
         // Top-right: manage macros - the same style of plus FAB used by the macro list
         // and profiles screens (ic_settings has a broken 256dp intrinsic size that
         // renders as a cropped mess in an unscaled ImageButton)
@@ -347,7 +347,8 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         gridParams.topMargin = dpToPx(MACRO_GRID_TOP_MARGIN_DP);
         gridParams.bottomMargin = dpToPx(72);
         gridParams.leftMargin = dpToPx(8);
-        gridParams.rightMargin = dpToPx(8);
+        // Leave the right-hand strip to the gauge column
+        gridParams.rightMargin = dpToPx(GAUGE_COLUMN_WIDTH_DP + 8);
         macroRecyclerView.setLayoutParams(gridParams);
 
         final GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
@@ -389,7 +390,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         trackpadHint.setVisibility(View.GONE);
         rootLayout.addView(trackpadHint);
 
-        createGaugeRow();
+        createGaugeColumn();
 
         statsOverlayText = new TextView(this);
         statsOverlayText.setTextColor(0xFFCCCCCC);
@@ -398,43 +399,48 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         statsOverlayText.setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2));
         FrameLayout.LayoutParams statsParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        statsParams.topMargin = dpToPx(GAUGE_ROW_TOP_MARGIN_DP + GAUGE_ROW_HEIGHT_DP + 2);
+                Gravity.TOP | Gravity.START);
+        statsParams.topMargin = dpToPx(8);
+        statsParams.leftMargin = dpToPx(8);
         statsOverlayText.setLayoutParams(statsParams);
-        statsOverlayText.setVisibility(View.GONE);
         rootLayout.addView(statsOverlayText);
+
+        // The readout is permanent, so the stats feeds start with the panel and only stop
+        // when it goes away.
+        Game.instance.setSecondScreenPerfListener(panelPerfListener);
+        startHostStatsPolling();
     }
 
     /**
-     * Builds the row of ring gauges shown above the macro grid: stream FPS measured on this
-     * device, plus the host PC's CPU, GPU and RAM load read from Vibepollo's web API.
+     * Builds the column of ring gauges pinned down the right edge: stream FPS and total latency
+     * measured on this device, then the host PC's CPU, GPU and RAM load from Vibepollo's web API.
      */
-    private void createGaugeRow() {
-        gaugeRow = new LinearLayout(this);
-        gaugeRow.setOrientation(LinearLayout.HORIZONTAL);
-        gaugeRow.setGravity(Gravity.CENTER);
-        gaugeRow.setFocusable(false);
-        gaugeRow.setPadding(dpToPx(GAUGE_ROW_PADDING_DP), dpToPx(GAUGE_ROW_PADDING_DP),
-                dpToPx(GAUGE_ROW_PADDING_DP), dpToPx(GAUGE_ROW_PADDING_DP));
+    private void createGaugeColumn() {
+        gaugeColumn = new LinearLayout(this);
+        gaugeColumn.setOrientation(LinearLayout.VERTICAL);
+        gaugeColumn.setGravity(Gravity.CENTER_HORIZONTAL);
+        gaugeColumn.setFocusable(false);
+        gaugeColumn.setPadding(dpToPx(GAUGE_COLUMN_PADDING_DP), dpToPx(GAUGE_COLUMN_PADDING_DP),
+                dpToPx(GAUGE_COLUMN_PADDING_DP), dpToPx(GAUGE_COLUMN_PADDING_DP));
         // Dark rounded card behind the gauges, as on the Thor's own dashboard
-        GradientDrawable rowBackground = new GradientDrawable();
-        rowBackground.setShape(GradientDrawable.RECTANGLE);
-        rowBackground.setCornerRadius(dpToPx(18));
-        rowBackground.setColor(0x99000000);
-        gaugeRow.setBackground(rowBackground);
-        FrameLayout.LayoutParams rowParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(GAUGE_ROW_HEIGHT_DP),
-                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        rowParams.topMargin = dpToPx(GAUGE_ROW_TOP_MARGIN_DP);
-        gaugeRow.setLayoutParams(rowParams);
-        gaugeRow.setVisibility(View.GONE);
+        GradientDrawable columnBackground = new GradientDrawable();
+        columnBackground.setShape(GradientDrawable.RECTANGLE);
+        columnBackground.setCornerRadius(dpToPx(18));
+        columnBackground.setColor(0x99000000);
+        gaugeColumn.setBackground(columnBackground);
+        FrameLayout.LayoutParams columnParams = new FrameLayout.LayoutParams(
+                dpToPx(GAUGE_COLUMN_WIDTH_DP), ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.END | Gravity.CENTER_VERTICAL);
+        columnParams.rightMargin = dpToPx(4);
+        gaugeColumn.setLayoutParams(columnParams);
 
         fpsGauge = addGauge(getString(R.string.second_screen_gauge_fps), COLOR_FPS);
+        latencyGauge = addGauge(getString(R.string.second_screen_gauge_latency), COLOR_LATENCY_GOOD);
         cpuGauge = addGauge(getString(R.string.second_screen_gauge_cpu), COLOR_CPU);
         gpuGauge = addGauge(getString(R.string.second_screen_gauge_gpu), COLOR_GPU);
         ramGauge = addGauge(getString(R.string.second_screen_gauge_ram), COLOR_RAM);
 
-        rootLayout.addView(gaugeRow);
+        rootLayout.addView(gaugeColumn);
     }
 
     private GaugeView addGauge(String label, int accentColor) {
@@ -443,48 +449,12 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         gauge.setAccentColor(accentColor);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 dpToPx(GAUGE_SIZE_DP), dpToPx(GAUGE_SIZE_DP));
-        params.setMargins(dpToPx(3), 0, dpToPx(3), 0);
+        if (gaugeColumn.getChildCount() > 0) {
+            params.topMargin = dpToPx(GAUGE_SPACING_DP);
+        }
         gauge.setLayoutParams(params);
-        gaugeRow.addView(gauge);
+        gaugeColumn.addView(gauge);
         return gauge;
-    }
-
-    /**
-     * Shows the performance readout on this screen: ring gauges for stream FPS (measured by the
-     * client's decoder, same source as the main-screen HUD) and for the host PC's CPU, GPU and
-     * RAM load, plus a compact latency line underneath.
-     */
-    private void toggleStatsOverlay() {
-        if (Game.instance == null) {
-            return;
-        }
-        statsEnabled = !statsEnabled;
-        statsButton.setAlpha(statsEnabled ? 1.0f : 0.5f);
-        if (statsEnabled) {
-            latencyText = null;
-            hostStatsMessage = null;
-            statsOverlayText.setText("");
-            statsOverlayText.setVisibility(View.VISIBLE);
-            gaugeRow.setVisibility(View.VISIBLE);
-            fpsGauge.clearReading();
-            clearHostGauges();
-            Game.instance.setSecondScreenPerfListener(panelPerfListener);
-            startHostStatsPolling();
-        } else {
-            statsOverlayText.setVisibility(View.GONE);
-            gaugeRow.setVisibility(View.GONE);
-            Game.instance.setSecondScreenPerfListener(null);
-            stopHostStatsPolling();
-        }
-        updateMacroGridMargin();
-    }
-
-    /** Keeps the macro grid clear of the gauge row while stats are on screen. */
-    private void updateMacroGridMargin() {
-        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) macroRecyclerView.getLayoutParams();
-        params.topMargin = dpToPx(statsEnabled
-                ? MACRO_GRID_TOP_MARGIN_WITH_GAUGES_DP : MACRO_GRID_TOP_MARGIN_DP);
-        macroRecyclerView.setLayoutParams(params);
     }
 
     /**
@@ -536,9 +506,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     }
 
     private void applyHostStats(HostStats stats) {
-        if (!statsEnabled) {
-            return;
-        }
         hostStatsMessage = null;
         if (stats.hasCpu()) {
             cpuGauge.setReading(String.format(Locale.getDefault(), "%.0f", stats.cpuPercent),
@@ -568,9 +535,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     }
 
     private void showHostStatsUnavailable(String reason) {
-        if (!statsEnabled) {
-            return;
-        }
         clearHostGauges();
         hostStatsMessage = getString(R.string.second_screen_host_stats_unavailable, reason);
         refreshStatsText();
@@ -578,10 +542,8 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
 
     // Called on the UI thread (Game.onPerfUpdate dispatches via runOnUiThread)
     private void onPerfTextUpdate(String text) {
-        if (!statsEnabled) {
-            return;
-        }
         latencyText = simplifyPerfText(text);
+
         float fps = parseFloatOrDefault(parseFps(text), -1f);
         if (fps >= 0f) {
             float target = prefConfig.fps > 0 ? prefConfig.fps : 60f;
@@ -589,7 +551,65 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         } else {
             fpsGauge.clearReading();
         }
+
+        updateLatencyGauge(text);
         refreshStatsText();
+    }
+
+    /**
+     * Sums the three legs of the frame's journey - network round trip, host processing and
+     * client decode - into one end-to-end figure. The ring fills up to the 100 ms mark and
+     * stays full beyond it, while the number keeps counting, and the color runs green to amber
+     * to a deepening red as the total climbs.
+     */
+    private void updateLatencyGauge(String text) {
+        String[] lines = text.split("\n");
+        float net = parseFloatOrDefault(matchGroup(
+                findLine(lines, prefixOf(R.string.perf_overlay_netlatency)), "(\\d+)"), -1f);
+        float host = parseFloatOrDefault(matchGroup(
+                findLine(lines, prefixOf(R.string.perf_overlay_hostprocessinglatency)),
+                "[\\d.,]+/[\\d.,]+/([\\d.,]+)"), -1f);
+        float decode = parseFloatOrDefault(matchGroup(
+                findLine(lines, prefixOf(R.string.perf_overlay_dectime)), "([\\d.,]+)"), -1f);
+        if (net < 0f) {
+            // Lite HUD reports the same two figures in its "5ms / 1.20ms" pair
+            net = parseFloatOrDefault(matchGroup(text, "([\\d.,]+)ms\\s*/"), -1f);
+            decode = parseFloatOrDefault(matchGroup(text, "/\\s*([\\d.,]+)ms"), decode);
+        }
+
+        float total = 0f;
+        boolean any = false;
+        for (float leg : new float[] {net, host, decode}) {
+            if (leg >= 0f) {
+                total += leg;
+                any = true;
+            }
+        }
+        if (!any) {
+            latencyGauge.clearReading();
+            return;
+        }
+        latencyGauge.setAccentColor(latencyColor(total));
+        latencyGauge.setReading(String.format(Locale.getDefault(), "%.0f", total),
+                getString(R.string.second_screen_gauge_unit_ms), total / LATENCY_FULL_MS);
+    }
+
+    private static int latencyColor(float totalMs) {
+        if (totalMs < LATENCY_GOOD_MS) {
+            return COLOR_LATENCY_GOOD;
+        }
+        if (totalMs < LATENCY_FAIR_MS) {
+            return COLOR_LATENCY_FAIR;
+        }
+        float t = Math.min((totalMs - LATENCY_FAIR_MS) / (LATENCY_FULL_MS - LATENCY_FAIR_MS), 1f);
+        return blendColor(COLOR_LATENCY_BAD, COLOR_LATENCY_WORST, t);
+    }
+
+    private static int blendColor(int from, int to, float t) {
+        int r = Math.round(Color.red(from) + (Color.red(to) - Color.red(from)) * t);
+        int g = Math.round(Color.green(from) + (Color.green(to) - Color.green(from)) * t);
+        int b = Math.round(Color.blue(from) + (Color.blue(to) - Color.blue(from)) * t);
+        return Color.argb(255, r, g, b);
     }
 
     private void refreshStatsText() {

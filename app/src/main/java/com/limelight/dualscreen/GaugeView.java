@@ -51,15 +51,10 @@ public class GaugeView extends View {
     }
 
     private void init() {
-        float density = getResources().getDisplayMetrics().density;
-        strokeWidth = 4.5f * density;
-
         trackPaint.setStyle(Paint.Style.STROKE);
-        trackPaint.setStrokeWidth(strokeWidth);
         trackPaint.setColor(0x24FFFFFF);
 
         arcPaint.setStyle(Paint.Style.STROKE);
-        arcPaint.setStrokeWidth(strokeWidth);
         arcPaint.setStrokeCap(Paint.Cap.ROUND);
         arcPaint.setColor(accentColor);
 
@@ -68,17 +63,32 @@ public class GaugeView extends View {
 
         labelPaint.setColor(0x99FFFFFF);
         labelPaint.setTextAlign(Paint.Align.CENTER);
-        labelPaint.setTextSize(9f * density);
         labelPaint.setTypeface(Typeface.DEFAULT);
 
         valuePaint.setColor(Color.WHITE);
         valuePaint.setTextAlign(Paint.Align.CENTER);
-        valuePaint.setTextSize(19f * density);
         valuePaint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL));
 
         unitPaint.setColor(0x80FFFFFF);
         unitPaint.setTextAlign(Paint.Align.CENTER);
-        unitPaint.setTextSize(9f * density);
+
+        applyMetrics(48f * getResources().getDisplayMetrics().density);
+    }
+
+    /** Ring and type are sized from the view itself so one gauge style works at any diameter. */
+    private void applyMetrics(float size) {
+        strokeWidth = Math.max(size * 0.058f, 2f);
+        trackPaint.setStrokeWidth(strokeWidth);
+        arcPaint.setStrokeWidth(strokeWidth);
+        labelPaint.setTextSize(size * 0.145f);
+        valuePaint.setTextSize(size * 0.27f);
+        unitPaint.setTextSize(size * 0.135f);
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        applyMetrics(Math.min(w, h));
     }
 
     public void setLabel(String label) {
@@ -168,12 +178,11 @@ public class GaugeView extends View {
         canvas.drawCircle(dotX, dotY, strokeWidth * 0.62f, dotPaint);
 
         // Center stack: label / value / unit
-        float density = getResources().getDisplayMetrics().density;
         float valueBaseline = centerY + valuePaint.getTextSize() * 0.36f;
         canvas.drawText(value, centerX, valueBaseline, valuePaint);
-        canvas.drawText(label, centerX, valueBaseline - valuePaint.getTextSize() - 2f * density, labelPaint);
+        canvas.drawText(label, centerX, valueBaseline - valuePaint.getTextSize() * 1.05f, labelPaint);
         if (!unit.isEmpty()) {
-            canvas.drawText(unit, centerX, valueBaseline + unitPaint.getTextSize() + 4f * density, unitPaint);
+            canvas.drawText(unit, centerX, valueBaseline + unitPaint.getTextSize() * 1.45f, unitPaint);
         }
     }
 }
