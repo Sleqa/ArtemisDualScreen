@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -60,10 +61,13 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private static final int DESIRED_MACRO_BUTTON_WIDTH_DP = 84;
 
     // Gauge row geometry (see createGaugeRow)
-    private static final int GAUGE_SIZE_DP = 78;
+    private static final int GAUGE_SIZE_DP = 72;
+    private static final int GAUGE_ROW_PADDING_DP = 8;
     private static final int GAUGE_ROW_TOP_MARGIN_DP = 60;
+    private static final int GAUGE_ROW_HEIGHT_DP = GAUGE_SIZE_DP + GAUGE_ROW_PADDING_DP * 2;
     private static final int MACRO_GRID_TOP_MARGIN_DP = 72;
-    private static final int MACRO_GRID_TOP_MARGIN_WITH_GAUGES_DP = 172;
+    private static final int MACRO_GRID_TOP_MARGIN_WITH_GAUGES_DP =
+            GAUGE_ROW_TOP_MARGIN_DP + GAUGE_ROW_HEIGHT_DP + 30;
 
     private static final int COLOR_FPS = 0xFFB14AE8;
     private static final int COLOR_CPU = 0xFFFF2D6F;
@@ -395,7 +399,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         FrameLayout.LayoutParams statsParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        statsParams.topMargin = dpToPx(GAUGE_ROW_TOP_MARGIN_DP + GAUGE_SIZE_DP + 4);
+        statsParams.topMargin = dpToPx(GAUGE_ROW_TOP_MARGIN_DP + GAUGE_ROW_HEIGHT_DP + 2);
         statsOverlayText.setLayoutParams(statsParams);
         statsOverlayText.setVisibility(View.GONE);
         rootLayout.addView(statsOverlayText);
@@ -410,8 +414,16 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         gaugeRow.setOrientation(LinearLayout.HORIZONTAL);
         gaugeRow.setGravity(Gravity.CENTER);
         gaugeRow.setFocusable(false);
+        gaugeRow.setPadding(dpToPx(GAUGE_ROW_PADDING_DP), dpToPx(GAUGE_ROW_PADDING_DP),
+                dpToPx(GAUGE_ROW_PADDING_DP), dpToPx(GAUGE_ROW_PADDING_DP));
+        // Dark rounded card behind the gauges, as on the Thor's own dashboard
+        GradientDrawable rowBackground = new GradientDrawable();
+        rowBackground.setShape(GradientDrawable.RECTANGLE);
+        rowBackground.setCornerRadius(dpToPx(18));
+        rowBackground.setColor(0x99000000);
+        gaugeRow.setBackground(rowBackground);
         FrameLayout.LayoutParams rowParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(GAUGE_SIZE_DP),
+                ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(GAUGE_ROW_HEIGHT_DP),
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         rowParams.topMargin = dpToPx(GAUGE_ROW_TOP_MARGIN_DP);
         gaugeRow.setLayoutParams(rowParams);
@@ -431,7 +443,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         gauge.setAccentColor(accentColor);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 dpToPx(GAUGE_SIZE_DP), dpToPx(GAUGE_SIZE_DP));
-        params.setMargins(dpToPx(4), 0, dpToPx(4), 0);
+        params.setMargins(dpToPx(3), 0, dpToPx(3), 0);
         gauge.setLayoutParams(params);
         gaugeRow.addView(gauge);
         return gauge;
@@ -489,15 +501,17 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         if (host == null) {
             return;
         }
-        if (!HostStatsPoller.hasCredentials(prefConfig.hostStatsUsername, prefConfig.hostStatsToken)) {
+        // Re-read the settings so credentials edited since the stream started take effect
+        PreferenceConfiguration prefs = PreferenceConfiguration.readPreferences(this);
+        if (!HostStatsPoller.hasCredentials(prefs.hostStatsUsername, prefs.hostStatsToken)) {
             showHostStatsUnavailable(getString(R.string.second_screen_host_stats_no_credentials));
             return;
         }
         // The web interface listens one port above the stream's HTTP port unless overridden
-        int webPort = prefConfig.hostStatsPort > 0
-                ? prefConfig.hostStatsPort : Game.instance.getHostPort() + 1;
+        int webPort = prefs.hostStatsPort > 0
+                ? prefs.hostStatsPort : Game.instance.getHostPort() + 1;
         hostStatsPoller = new HostStatsPoller(host, webPort, Game.instance.getServerCert(),
-                prefConfig.hostStatsUsername, prefConfig.hostStatsPassword, prefConfig.hostStatsToken,
+                prefs.hostStatsUsername, prefs.hostStatsPassword, prefs.hostStatsToken,
                 new HostStatsPoller.Listener() {
                     @Override
                     public void onHostStats(HostStats stats) {
