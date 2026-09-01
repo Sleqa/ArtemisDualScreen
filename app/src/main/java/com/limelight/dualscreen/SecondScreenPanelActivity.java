@@ -52,19 +52,27 @@ import java.util.regex.Pattern;
  * Companion panel shown on a built-in secondary screen (e.g. AYN Thor) while a stream is active
  * on the main screen. Offers a soft-keyboard toggle (forwarding typed text into the live stream
  * via {@link ExternalControllerView}'s IME bridge), a grid of tappable macro keys, a trackpad
- * mode, and a permanent column of ring gauges down the right edge showing stream FPS, end-to-end
- * latency, and the host PC's CPU/GPU/RAM load.
+ * mode, and a permanent row of ring gauges across the top showing stream FPS, end-to-end latency,
+ * and the host PC's CPU/GPU/RAM load. The gauges and the macro grid each sit on a grey card.
  */
 public class SecondScreenPanelActivity extends AppCompatActivity {
 
     private static final int DESIRED_MACRO_BUTTON_WIDTH_DP = 84;
 
-    // Gauge column geometry (see createGaugeColumn)
+    // Gauge row geometry (see createGaugeRow)
     private static final int GAUGE_SIZE_DP = 56;
-    private static final int GAUGE_COLUMN_PADDING_DP = 6;
+    private static final int GAUGE_ROW_PADDING_DP = 6;
     private static final int GAUGE_SPACING_DP = 4;
-    private static final int GAUGE_COLUMN_WIDTH_DP = GAUGE_SIZE_DP + GAUGE_COLUMN_PADDING_DP * 2;
-    private static final int MACRO_GRID_TOP_MARGIN_DP = 72;
+    private static final int GAUGE_ROW_HEIGHT_DP = GAUGE_SIZE_DP + GAUGE_ROW_PADDING_DP * 2;
+    private static final int PANEL_MARGIN_DP = 8;
+    private static final int MACRO_GRID_TOP_MARGIN_DP = PANEL_MARGIN_DP + GAUGE_ROW_HEIGHT_DP + 8;
+    private static final int MACRO_GRID_BOTTOM_MARGIN_DP = 64;
+    private static final int PANEL_CORNER_RADIUS_DP = 18;
+
+    // Grey backdrop: a darker ground for the whole panel with lighter cards carrying the
+    // gauges and the macro grid.
+    private static final int COLOR_PANEL_GROUND = 0xFF1C1C20;
+    private static final int COLOR_PANEL_CARD = 0xFF2E2E35;
 
     private static final int COLOR_FPS = 0xFFB14AE8;
     private static final int COLOR_CPU = 0xFFFF2D6F;
@@ -120,7 +128,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private TextView trackpadHint;
     private ImageButton trackpadButton;
     private ImageButton mouseModeButton;
-    private LinearLayout gaugeColumn;
+    private LinearLayout gaugeRow;
     private GaugeView fpsGauge;
     private GaugeView latencyGauge;
     private GaugeView cpuGauge;
@@ -277,13 +285,26 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         // quit handle disappears behind its corner container the moment it's dragged up.
         rootLayout.setClipChildren(false);
         rootLayout.setClipToPadding(false);
+        rootLayout.setBackgroundColor(COLOR_PANEL_GROUND);
         setContentView(rootLayout);
 
-        // Top-right: manage macros - the same style of plus FAB used by the macro list
-        // and profiles screens (ic_settings has a broken 256dp intrinsic size that
-        // renders as a cropped mess in an unscaled ImageButton)
-        LinearLayout topBar = createButtonContainer(Gravity.TOP | Gravity.END);
-        topBar.setFocusable(false);
+        // Bottom-left: soft keyboard toggle, trackpad toggle and the manage-macros button.
+        // The gauges own the top strip now, so the macro button lives down here with the
+        // other controls (it keeps the plus FAB style used by the macro list and profiles
+        // screens - ic_settings has a broken 256dp intrinsic size that renders as a cropped
+        // mess in an unscaled ImageButton).
+        LinearLayout bottomBar = createButtonContainer(Gravity.BOTTOM | Gravity.START);
+        bottomBar.setFocusable(false);
+        bottomBar.setGravity(Gravity.BOTTOM | Gravity.CENTER_VERTICAL);
+        bottomBar.addView(createImageButton(R.drawable.ic_android_keyboard, v -> toggleKeyboard()));
+        trackpadButton = createImageButton(R.drawable.ic_trackpad, v -> toggleTrackpad());
+        trackpadButton.setAlpha(0.5f);
+        bottomBar.addView(trackpadButton);
+        mouseModeButton = createImageButton(R.drawable.ic_mouse, v -> toggleMouseModeOverride());
+        mouseModeButton.setAlpha(0.5f);
+        mouseModeButton.setVisibility(View.GONE);
+        bottomBar.addView(mouseModeButton);
+
         FloatingActionButton manageMacrosFab = new FloatingActionButton(this);
         manageMacrosFab.setImageResource(R.drawable.ic_add_base);
         manageMacrosFab.setSize(FloatingActionButton.SIZE_MINI);
@@ -295,21 +316,9 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         int fabMargin = dpToPx(8);
         fabParams.setMargins(fabMargin, fabMargin, fabMargin, fabMargin);
+        fabParams.gravity = Gravity.CENTER_VERTICAL;
         manageMacrosFab.setLayoutParams(fabParams);
-        topBar.addView(manageMacrosFab);
-        rootLayout.addView(topBar);
-
-        // Bottom-left: soft keyboard toggle + trackpad toggle
-        LinearLayout bottomBar = createButtonContainer(Gravity.BOTTOM | Gravity.START);
-        bottomBar.setFocusable(false);
-        bottomBar.addView(createImageButton(R.drawable.ic_android_keyboard, v -> toggleKeyboard()));
-        trackpadButton = createImageButton(R.drawable.ic_trackpad, v -> toggleTrackpad());
-        trackpadButton.setAlpha(0.5f);
-        bottomBar.addView(trackpadButton);
-        mouseModeButton = createImageButton(R.drawable.ic_mouse, v -> toggleMouseModeOverride());
-        mouseModeButton.setAlpha(0.5f);
-        mouseModeButton.setVisibility(View.GONE);
-        bottomBar.addView(mouseModeButton);
+        bottomBar.addView(manageMacrosFab);
         rootLayout.addView(bottomBar);
 
         // Bottom-right: swipe-up-to-quit handle. Deliberately not a tap target -
@@ -341,11 +350,14 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         FrameLayout.LayoutParams gridParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         gridParams.topMargin = dpToPx(MACRO_GRID_TOP_MARGIN_DP);
-        gridParams.bottomMargin = dpToPx(72);
-        gridParams.leftMargin = dpToPx(8);
-        // Leave the right-hand strip to the gauge column
-        gridParams.rightMargin = dpToPx(GAUGE_COLUMN_WIDTH_DP + 8);
+        gridParams.bottomMargin = dpToPx(MACRO_GRID_BOTTOM_MARGIN_DP);
+        gridParams.leftMargin = dpToPx(PANEL_MARGIN_DP);
+        gridParams.rightMargin = dpToPx(PANEL_MARGIN_DP);
         macroRecyclerView.setLayoutParams(gridParams);
+        macroRecyclerView.setBackground(cardBackground());
+        int gridPadding = dpToPx(6);
+        macroRecyclerView.setPadding(gridPadding, gridPadding, gridPadding, gridPadding);
+        macroRecyclerView.setClipToPadding(false);
 
         final GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
         macroRecyclerView.setLayoutManager(layoutManager);
@@ -386,7 +398,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         trackpadHint.setVisibility(View.GONE);
         rootLayout.addView(trackpadHint);
 
-        createGaugeColumn();
+        createGaugeRow();
 
         // The gauges are permanent, so the stats feeds start with the panel and only stop
         // when it goes away.
@@ -395,27 +407,24 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     }
 
     /**
-     * Builds the column of ring gauges pinned down the right edge: stream FPS and total latency
+     * Builds the row of ring gauges across the top of the panel: stream FPS and total latency
      * measured on this device, then the host PC's CPU, GPU and RAM load from Vibepollo's web API.
      */
-    private void createGaugeColumn() {
-        gaugeColumn = new LinearLayout(this);
-        gaugeColumn.setOrientation(LinearLayout.VERTICAL);
-        gaugeColumn.setGravity(Gravity.CENTER_HORIZONTAL);
-        gaugeColumn.setFocusable(false);
-        gaugeColumn.setPadding(dpToPx(GAUGE_COLUMN_PADDING_DP), dpToPx(GAUGE_COLUMN_PADDING_DP),
-                dpToPx(GAUGE_COLUMN_PADDING_DP), dpToPx(GAUGE_COLUMN_PADDING_DP));
-        // Dark rounded card behind the gauges, as on the Thor's own dashboard
-        GradientDrawable columnBackground = new GradientDrawable();
-        columnBackground.setShape(GradientDrawable.RECTANGLE);
-        columnBackground.setCornerRadius(dpToPx(18));
-        columnBackground.setColor(0x99000000);
-        gaugeColumn.setBackground(columnBackground);
-        FrameLayout.LayoutParams columnParams = new FrameLayout.LayoutParams(
-                dpToPx(GAUGE_COLUMN_WIDTH_DP), ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.END | Gravity.CENTER_VERTICAL);
-        columnParams.rightMargin = dpToPx(4);
-        gaugeColumn.setLayoutParams(columnParams);
+    private void createGaugeRow() {
+        gaugeRow = new LinearLayout(this);
+        gaugeRow.setOrientation(LinearLayout.HORIZONTAL);
+        gaugeRow.setGravity(Gravity.CENTER);
+        gaugeRow.setFocusable(false);
+        int padding = dpToPx(GAUGE_ROW_PADDING_DP);
+        gaugeRow.setPadding(padding, padding, padding, padding);
+        gaugeRow.setBackground(cardBackground());
+        FrameLayout.LayoutParams rowParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(GAUGE_ROW_HEIGHT_DP),
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        rowParams.topMargin = dpToPx(PANEL_MARGIN_DP);
+        rowParams.leftMargin = dpToPx(PANEL_MARGIN_DP);
+        rowParams.rightMargin = dpToPx(PANEL_MARGIN_DP);
+        gaugeRow.setLayoutParams(rowParams);
 
         fpsGauge = addGauge(getString(R.string.second_screen_gauge_fps), COLOR_FPS);
         latencyGauge = addGauge(getString(R.string.second_screen_gauge_latency), COLOR_LATENCY_GOOD);
@@ -423,21 +432,33 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         gpuGauge = addGauge(getString(R.string.second_screen_gauge_gpu), COLOR_GPU);
         ramGauge = addGauge(getString(R.string.second_screen_gauge_ram), COLOR_RAM);
 
-        rootLayout.addView(gaugeColumn);
+        rootLayout.addView(gaugeRow);
     }
 
     private GaugeView addGauge(String label, int accentColor) {
         GaugeView gauge = new GaugeView(this);
         gauge.setLabel(label);
         gauge.setAccentColor(accentColor);
+        // Equal shares of the row's width: on a wide second screen each gauge keeps its
+        // GAUGE_SIZE_DP circle centered in its cell, on a narrow one they shrink together
+        // instead of overflowing the card.
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                dpToPx(GAUGE_SIZE_DP), dpToPx(GAUGE_SIZE_DP));
-        if (gaugeColumn.getChildCount() > 0) {
-            params.topMargin = dpToPx(GAUGE_SPACING_DP);
+                0, dpToPx(GAUGE_SIZE_DP), 1f);
+        if (gaugeRow.getChildCount() > 0) {
+            params.leftMargin = dpToPx(GAUGE_SPACING_DP);
         }
         gauge.setLayoutParams(params);
-        gaugeColumn.addView(gauge);
+        gaugeRow.addView(gauge);
         return gauge;
+    }
+
+    /** Rounded grey card sitting behind the gauges and behind the macro grid. */
+    private GradientDrawable cardBackground() {
+        GradientDrawable background = new GradientDrawable();
+        background.setShape(GradientDrawable.RECTANGLE);
+        background.setCornerRadius(dpToPx(PANEL_CORNER_RADIUS_DP));
+        background.setColor(COLOR_PANEL_CARD);
+        return background;
     }
 
     /**
