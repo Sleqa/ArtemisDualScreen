@@ -127,7 +127,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private TextView emptyStateText;
     private TextView trackpadHint;
     private ImageButton trackpadButton;
-    private ImageButton mouseModeButton;
     private LinearLayout gaugeRow;
     private GaugeView fpsGauge;
     private GaugeView latencyGauge;
@@ -219,6 +218,11 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         stopHostStatsPolling();
         if (Game.instance != null) {
             Game.instance.setSecondScreenPerfListener(null);
+            // Don't leave the stream stuck in the trackpad mouse mode this panel switched it to
+            if (mouseModeOverridden) {
+                Game.instance.setMouseMode(previousMouseMode);
+                mouseModeOverridden = false;
+            }
         }
     }
 
@@ -300,10 +304,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         trackpadButton = createImageButton(R.drawable.ic_trackpad, v -> toggleTrackpad());
         trackpadButton.setAlpha(0.5f);
         bottomBar.addView(trackpadButton);
-        mouseModeButton = createImageButton(R.drawable.ic_mouse, v -> toggleMouseModeOverride());
-        mouseModeButton.setAlpha(0.5f);
-        mouseModeButton.setVisibility(View.GONE);
-        bottomBar.addView(mouseModeButton);
 
         FloatingActionButton manageMacrosFab = new FloatingActionButton(this);
         manageMacrosFab.setImageResource(R.drawable.ic_add_base);
@@ -680,15 +680,24 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     /**
      * Turns the whole panel surface into a touchpad for the host PC's mouse, forwarding
      * touches into the stream the same way ExternalDisplayControlActivity's controller
-     * surface does. Pointer behavior (natural/gaming trackpad, absolute) follows the
-     * in-stream mouse mode selected from the game menu.
+     * surface does.
+     *
+     * <p>Switching the stream to Trackpad (natural) - the classic drag-to-move-the-cursor
+     * behavior - is part of turning the trackpad on, because dragging here does nothing
+     * useful under the modes people normally stream with (direct touch treats the drag as a
+     * touch gesture instead of cursor movement). Turning the trackpad back off restores
+     * whatever mode the stream was in.</p>
      */
     @SuppressLint("ClickableViewAccessibility")
     private void toggleTrackpad() {
         trackpadEnabled = !trackpadEnabled;
         trackpadButton.setAlpha(trackpadEnabled ? 1.0f : 0.5f);
         if (trackpadEnabled) {
-            mouseModeButton.setVisibility(View.VISIBLE);
+            if (Game.instance != null && !mouseModeOverridden) {
+                previousMouseMode = Game.instance.getMouseMode();
+                Game.instance.setMouseMode(MOUSE_MODE_TRACKPAD_NATURAL);
+                mouseModeOverridden = true;
+            }
             rootLayout.setOnTouchListener((v, event) -> {
                 if (Game.instance != null) {
                     Game.instance.handleMotionEvent(v, event);
@@ -697,39 +706,14 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
             });
         } else {
             rootLayout.setOnTouchListener(null);
-            mouseModeButton.setVisibility(View.GONE);
-            // Leaving trackpad mode restores whatever mouse mode the stream had
             if (mouseModeOverridden) {
                 if (Game.instance != null) {
                     Game.instance.setMouseMode(previousMouseMode);
                 }
                 mouseModeOverridden = false;
-                mouseModeButton.setAlpha(0.5f);
             }
         }
         updateCenterVisibility();
-    }
-
-    /**
-     * Temporarily switches the stream's mouse mode to Trackpad (natural) - the classic
-     * drag-to-move-the-cursor behavior - while the panel trackpad is in use, since the
-     * user's regular mode (e.g. direct touch) makes trackpad dragging act like touch
-     * gestures instead. Toggling off (or exiting trackpad mode) restores the prior mode.
-     */
-    private void toggleMouseModeOverride() {
-        if (Game.instance == null) {
-            return;
-        }
-        if (!mouseModeOverridden) {
-            previousMouseMode = Game.instance.getMouseMode();
-            Game.instance.setMouseMode(MOUSE_MODE_TRACKPAD_NATURAL);
-            mouseModeOverridden = true;
-            mouseModeButton.setAlpha(1.0f);
-        } else {
-            Game.instance.setMouseMode(previousMouseMode);
-            mouseModeOverridden = false;
-            mouseModeButton.setAlpha(0.5f);
-        }
     }
 
     private void onMacroTapped(KeyConfigHelper.Shortcut macro) {

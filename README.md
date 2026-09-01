@@ -6,7 +6,7 @@ This is a fork of [Artemis](https://github.com/ClassicOldSong/moonlight-android)
 
 - A grid of compact circular macro keys (e.g. Alt+Tab, Ctrl+Shift+Esc) that you create and edit in-app, each with an optional icon from a bundled 75-icon set and an optional name shown underneath
 - A reliable soft-keyboard toggle that forwards typed input straight into the stream
-- A trackpad mode that turns the second screen into a mouse trackpad for the host PC
+- A trackpad mode that turns the second screen into a mouse trackpad for the host PC, switching the stream to its trackpad mouse mode for as long as it's on
 - An always-on row of ring gauges across the top: stream FPS, end-to-end latency (network + host processing + client decode, green under 10 ms, amber under 18 ms, then a deepening red, with the ring full at 100 ms), and the host PC's CPU, GPU and RAM load read live from a Vibepollo/Apollo host's web API
 - A swipe-up-to-quit handle to end the session without touching the main screen
 
