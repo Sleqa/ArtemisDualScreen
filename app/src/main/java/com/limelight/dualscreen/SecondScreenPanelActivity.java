@@ -3,9 +3,9 @@ package com.limelight.dualscreen;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -29,6 +29,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -36,7 +38,6 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.limelight.Game;
 import com.limelight.R;
 import com.limelight.binding.video.PerfOverlayListener;
@@ -65,29 +66,27 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private static final int GAUGE_SPACING_DP = 4;
     private static final int GAUGE_ROW_HEIGHT_DP = GAUGE_SIZE_DP + GAUGE_ROW_PADDING_DP * 2;
     private static final int PANEL_MARGIN_DP = 8;
-    private static final int MACRO_GRID_TOP_MARGIN_DP = PANEL_MARGIN_DP + GAUGE_ROW_HEIGHT_DP + 8;
+    private static final int CARD_HEADER_HEIGHT_DP = 22;
+    private static final int MACRO_GRID_TOP_MARGIN_DP =
+            PANEL_MARGIN_DP + CARD_HEADER_HEIGHT_DP + GAUGE_ROW_HEIGHT_DP + 8;
     private static final int MACRO_GRID_BOTTOM_MARGIN_DP = 64;
-    private static final int PANEL_CORNER_RADIUS_DP = 18;
 
-    // Grey backdrop: a darker ground for the whole panel with lighter cards carrying the
-    // gauges and the macro grid.
-    private static final int COLOR_PANEL_GROUND = 0xFF1C1C20;
-    private static final int COLOR_PANEL_CARD = 0xFF2E2E35;
+    // Ring colours, borrowed from the Fluent data palette Windows uses for its own
+    // performance graphs: blue for the stream, blue/purple/green for the host counters.
+    private static final int COLOR_FPS = 0xFF60CDFF;
+    private static final int COLOR_CPU = 0xFF4CC2FF;
+    private static final int COLOR_GPU = 0xFFB4A0FF;
+    private static final int COLOR_RAM = 0xFF6CCB5F;
 
-    private static final int COLOR_FPS = 0xFFB14AE8;
-    private static final int COLOR_CPU = 0xFFFF2D6F;
-    private static final int COLOR_GPU = 0xFF38B6FF;
-    private static final int COLOR_RAM = 0xFF35D07F;
-
-    // Latency gauge banding: green while the round trip is comfortable, amber as it slips,
-    // then red darkening toward the 100 ms point where the ring is full.
+    // Latency ring banding: Fluent's success/caution/critical colours, the critical one
+    // darkening toward the 100 ms point where the ring is full.
     private static final float LATENCY_GOOD_MS = 10f;
     private static final float LATENCY_FAIR_MS = 18f;
     private static final float LATENCY_FULL_MS = 100f;
-    private static final int COLOR_LATENCY_GOOD = 0xFF35D07F;
-    private static final int COLOR_LATENCY_FAIR = 0xFFFFB02E;
-    private static final int COLOR_LATENCY_BAD = 0xFFFF3B30;
-    private static final int COLOR_LATENCY_WORST = 0xFF6E0A0A;
+    private static final int COLOR_LATENCY_GOOD = 0xFF6CCB5F;
+    private static final int COLOR_LATENCY_FAIR = 0xFFFCE100;
+    private static final int COLOR_LATENCY_BAD = 0xFFFF99A4;
+    private static final int COLOR_LATENCY_WORST = 0xFFC42B1C;
 
     /**
      * Panel root view that always acts as an IME target. When the commit-text pref is off,
@@ -289,7 +288,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         // quit handle disappears behind its corner container the moment it's dragged up.
         rootLayout.setClipChildren(false);
         rootLayout.setClipToPadding(false);
-        rootLayout.setBackgroundColor(COLOR_PANEL_GROUND);
+        rootLayout.setBackgroundColor(ContextCompat.getColor(this, R.color.win_solid_background_base));
         setContentView(rootLayout);
 
         // Bottom-left: soft keyboard toggle, trackpad toggle and the manage-macros button.
@@ -300,25 +299,14 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         LinearLayout bottomBar = createButtonContainer(Gravity.BOTTOM | Gravity.START);
         bottomBar.setFocusable(false);
         bottomBar.setGravity(Gravity.BOTTOM | Gravity.CENTER_VERTICAL);
-        bottomBar.addView(createImageButton(R.drawable.ic_android_keyboard, v -> toggleKeyboard()));
-        trackpadButton = createImageButton(R.drawable.ic_trackpad, v -> toggleTrackpad());
-        trackpadButton.setAlpha(0.5f);
+        bottomBar.addView(createCommandButton(R.drawable.ic_macro_keyboard,
+                R.string.second_screen_keyboard_hint, v -> toggleKeyboard()));
+        trackpadButton = createCommandButton(R.drawable.ic_macro_cursor_default_click,
+                R.string.second_screen_trackpad_hint, v -> toggleTrackpad());
         bottomBar.addView(trackpadButton);
-
-        FloatingActionButton manageMacrosFab = new FloatingActionButton(this);
-        manageMacrosFab.setImageResource(R.drawable.ic_add_base);
-        manageMacrosFab.setSize(FloatingActionButton.SIZE_MINI);
-        manageMacrosFab.setContentDescription(getString(R.string.title_manage_macros));
-        manageMacrosFab.setFocusable(false);
-        manageMacrosFab.setOnClickListener(v ->
-                startActivity(new Intent(this, MacroListActivity.class)));
-        LinearLayout.LayoutParams fabParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        int fabMargin = dpToPx(8);
-        fabParams.setMargins(fabMargin, fabMargin, fabMargin, fabMargin);
-        fabParams.gravity = Gravity.CENTER_VERTICAL;
-        manageMacrosFab.setLayoutParams(fabParams);
-        bottomBar.addView(manageMacrosFab);
+        bottomBar.addView(createCommandButton(R.drawable.ic_macro_view_grid,
+                R.string.title_manage_macros,
+                v -> startActivity(new Intent(this, MacroListActivity.class))));
         rootLayout.addView(bottomBar);
 
         // Bottom-right: swipe-up-to-quit handle. Deliberately not a tap target -
@@ -329,18 +317,9 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         // Let the handle render outside the container's bounds while dragged upward
         quitBar.setClipChildren(false);
         quitBar.setClipToPadding(false);
-        FloatingActionButton quitButton = new FloatingActionButton(this);
-        quitButton.setImageResource(R.drawable.ic_close);
-        quitButton.setSize(FloatingActionButton.SIZE_MINI);
-        quitButton.setBackgroundTintList(ColorStateList.valueOf(0xFFD32F2F));
-        quitButton.setAlpha(0.5f);
-        quitButton.setContentDescription(getString(R.string.second_screen_quit_hint));
-        quitButton.setFocusable(false);
-        LinearLayout.LayoutParams quitParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        int quitMargin = dpToPx(8);
-        quitParams.setMargins(quitMargin, quitMargin, quitMargin, quitMargin);
-        quitButton.setLayoutParams(quitParams);
+        ImageButton quitButton = createCommandButton(R.drawable.ic_macro_close,
+                R.string.second_screen_quit_hint, null);
+        quitButton.setColorFilter(ContextCompat.getColor(this, R.color.win_critical));
         attachSwipeUpToQuit(quitButton);
         quitBar.addView(quitButton);
         rootLayout.addView(quitBar);
@@ -356,7 +335,7 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         macroRecyclerView.setLayoutParams(gridParams);
         macroRecyclerView.setBackground(cardBackground());
         int gridPadding = dpToPx(6);
-        macroRecyclerView.setPadding(gridPadding, gridPadding, gridPadding, gridPadding);
+        macroRecyclerView.setPadding(gridPadding, dpToPx(CARD_HEADER_HEIGHT_DP), gridPadding, gridPadding);
         macroRecyclerView.setClipToPadding(false);
 
         final GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
@@ -375,6 +354,15 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         macroGridAdapter = new MacroGridAdapter(this, this::onMacroTapped);
         macroRecyclerView.setAdapter(macroGridAdapter);
         rootLayout.addView(macroRecyclerView);
+
+        TextView macroHeader = createCardHeader(R.string.second_screen_card_macros);
+        FrameLayout.LayoutParams macroHeaderParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(CARD_HEADER_HEIGHT_DP),
+                Gravity.TOP | Gravity.START);
+        macroHeaderParams.topMargin = dpToPx(MACRO_GRID_TOP_MARGIN_DP + 6);
+        macroHeaderParams.leftMargin = dpToPx(PANEL_MARGIN_DP + 6);
+        macroHeader.setLayoutParams(macroHeaderParams);
+        rootLayout.addView(macroHeader);
 
         emptyStateText = new TextView(this);
         emptyStateText.setText(R.string.macro_list_tap_create);
@@ -411,20 +399,31 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
      * measured on this device, then the host PC's CPU, GPU and RAM load from Vibepollo's web API.
      */
     private void createGaugeRow() {
+        // The card is a header row plus the ring row, the way a Windows widget stacks a
+        // caption above its content.
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setFocusable(false);
+        int padding = dpToPx(GAUGE_ROW_PADDING_DP);
+        card.setPadding(padding, padding, padding, padding);
+        card.setBackground(cardBackground());
+        FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(GAUGE_ROW_HEIGHT_DP + CARD_HEADER_HEIGHT_DP),
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        cardParams.topMargin = dpToPx(PANEL_MARGIN_DP);
+        cardParams.leftMargin = dpToPx(PANEL_MARGIN_DP);
+        cardParams.rightMargin = dpToPx(PANEL_MARGIN_DP);
+        card.setLayoutParams(cardParams);
+        card.addView(createCardHeader(R.string.second_screen_card_performance));
+
         gaugeRow = new LinearLayout(this);
         gaugeRow.setOrientation(LinearLayout.HORIZONTAL);
         gaugeRow.setGravity(Gravity.CENTER);
         gaugeRow.setFocusable(false);
-        int padding = dpToPx(GAUGE_ROW_PADDING_DP);
-        gaugeRow.setPadding(padding, padding, padding, padding);
-        gaugeRow.setBackground(cardBackground());
-        FrameLayout.LayoutParams rowParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(GAUGE_ROW_HEIGHT_DP),
-                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        rowParams.topMargin = dpToPx(PANEL_MARGIN_DP);
-        rowParams.leftMargin = dpToPx(PANEL_MARGIN_DP);
-        rowParams.rightMargin = dpToPx(PANEL_MARGIN_DP);
-        gaugeRow.setLayoutParams(rowParams);
+        gaugeRow.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(GAUGE_SIZE_DP)));
+        card.addView(gaugeRow);
 
         fpsGauge = addGauge(getString(R.string.second_screen_gauge_fps), COLOR_FPS);
         latencyGauge = addGauge(getString(R.string.second_screen_gauge_latency), COLOR_LATENCY_GOOD);
@@ -432,7 +431,21 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         gpuGauge = addGauge(getString(R.string.second_screen_gauge_gpu), COLOR_GPU);
         ramGauge = addGauge(getString(R.string.second_screen_gauge_ram), COLOR_RAM);
 
-        rootLayout.addView(gaugeRow);
+        rootLayout.addView(card);
+    }
+
+    /** Caption row that titles a card, matching the header on a Windows 11 widget. */
+    private TextView createCardHeader(int titleRes) {
+        TextView header = new TextView(this);
+        header.setText(titleRes);
+        header.setAllCaps(false);
+        header.setTextSize(11);
+        header.setTextColor(ContextCompat.getColor(this, R.color.win_text_secondary));
+        header.setTypeface(ResourcesCompat.getFont(this, R.font.win_ui), Typeface.BOLD);
+        header.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(CARD_HEADER_HEIGHT_DP)));
+        header.setPadding(dpToPx(6), 0, 0, 0);
+        return header;
     }
 
     private GaugeView addGauge(String label, int accentColor) {
@@ -452,13 +465,32 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         return gauge;
     }
 
-    /** Rounded grey card sitting behind the gauges and behind the macro grid. */
-    private GradientDrawable cardBackground() {
-        GradientDrawable background = new GradientDrawable();
-        background.setShape(GradientDrawable.RECTANGLE);
-        background.setCornerRadius(dpToPx(PANEL_CORNER_RADIUS_DP));
-        background.setColor(COLOR_PANEL_CARD);
-        return background;
+    /** Fluent card - layer fill, hairline stroke, 8dp corners - behind each section. */
+    private Drawable cardBackground() {
+        return ContextCompat.getDrawable(this, R.drawable.bg_win_card);
+    }
+
+    /**
+     * Command-bar button: a Fluent icon button (4dp corners, control fill, hairline stroke).
+     * Passing a null listener leaves the button inert, for controls driven by a gesture.
+     */
+    private ImageButton createCommandButton(int iconRes, int contentDescriptionRes,
+                                            View.OnClickListener listener) {
+        ImageButton button = new ImageButton(this);
+        button.setImageResource(iconRes);
+        button.setBackgroundResource(R.drawable.bg_win_control);
+        button.setColorFilter(ContextCompat.getColor(this, R.color.win_text_primary));
+        button.setContentDescription(getString(contentDescriptionRes));
+        button.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+        button.setPadding(dpToPx(9), dpToPx(9), dpToPx(9), dpToPx(9));
+        button.setFocusable(false);
+        if (listener != null) {
+            button.setOnClickListener(listener);
+        }
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dpToPx(40), dpToPx(40));
+        params.setMargins(dpToPx(8), dpToPx(8), 0, dpToPx(8));
+        button.setLayoutParams(params);
+        return button;
     }
 
     /**
@@ -826,15 +858,6 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, gravity);
         layout.setLayoutParams(params);
         return layout;
-    }
-
-    private ImageButton createImageButton(int imageResourceId, View.OnClickListener listener) {
-        ImageButton button = new ImageButton(this);
-        button.setImageResource(imageResourceId);
-        button.setBackgroundColor(Color.TRANSPARENT);
-        button.setOnClickListener(listener);
-        button.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(56), dpToPx(56)));
-        return button;
     }
 
     private int dpToPx(int dp) {

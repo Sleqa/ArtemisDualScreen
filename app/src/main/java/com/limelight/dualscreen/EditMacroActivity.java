@@ -1,6 +1,5 @@
 package com.limelight.dualscreen;
 
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -15,8 +14,10 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -114,7 +115,7 @@ public class EditMacroActivity extends AppCompatActivity {
         int gridPadding = dpToPx(12);
         grid.setPadding(gridPadding, gridPadding, gridPadding, gridPadding);
 
-        final AlertDialog dialog = new AlertDialog.Builder(this)
+        final AlertDialog dialog = new AlertDialog.Builder(this, R.style.Theme_Win_Dialog)
                 .setTitle(R.string.macro_icon_pick_title)
                 .setView(wrapInScrollView(grid))
                 .setNegativeButton(R.string.cancel, null)
@@ -143,13 +144,16 @@ public class EditMacroActivity extends AppCompatActivity {
         if (iconRes != 0) {
             ImageView image = new ImageView(this);
             image.setImageResource(iconRes);
-            image.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
+            image.setColorFilter(ContextCompat.getColor(this,
+                    TextUtils.equals(iconId, selectedIcon) ? R.color.win_text_on_accent
+                                                           : R.color.win_text_primary));
+            image.setPadding(dpToPx(13), dpToPx(13), dpToPx(13), dpToPx(13));
             view = image;
         } else {
             // "No icon" cell - the macro falls back to its initials
             TextView none = new TextView(this);
             none.setText(R.string.macro_icon_none_glyph);
-            none.setTextColor(0x99FFFFFF);
+            none.setTextColor(ContextCompat.getColor(this, R.color.win_text_tertiary));
             none.setTextSize(20);
             none.setGravity(Gravity.CENTER);
             view = none;
@@ -161,7 +165,7 @@ public class EditMacroActivity extends AppCompatActivity {
         params.setMargins(dpToPx(2), dpToPx(2), dpToPx(2), dpToPx(2));
         view.setLayoutParams(params);
         view.setBackgroundResource(TextUtils.equals(iconId, selectedIcon)
-                ? R.drawable.bg_macro_circle : R.drawable.bg_macro_icon_cell);
+                ? R.drawable.bg_win_accent_control : R.drawable.bg_win_control);
         view.setOnClickListener(v -> {
             selectedIcon = iconId;
             renderSelectedIcon();

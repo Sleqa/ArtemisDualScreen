@@ -1,6 +1,5 @@
 package com.limelight.dualscreen;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.text.TextUtils;
@@ -13,6 +12,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.limelight.R;
@@ -74,7 +74,7 @@ public class MacroAdapter extends RecyclerView.Adapter<MacroAdapter.MacroViewHol
             context.startActivity(intent);
         });
 
-        holder.deleteMacro.setOnClickListener(v -> new AlertDialog.Builder(context)
+        holder.deleteMacro.setOnClickListener(v -> new AlertDialog.Builder(context, R.style.Theme_Win_Dialog)
                 .setTitle(R.string.macro_delete_macro)
                 .setMessage(context.getString(R.string.macro_confirm_delete,
                         named ? macro.name : context.getString(R.string.macro_unnamed)))

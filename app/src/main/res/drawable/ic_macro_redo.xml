@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Design Icons "redo" (Pictogrammers), Apache License 2.0 -->
+<!-- Fluent UI System Icons "arrow_redo_24_filled" (Microsoft), MIT License -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +7,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.54,15.22L3.9,16C4.95,12.81 7.95,10.5 11.5,10.5C13.45,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z" />
+        android:pathData="m18 7.59-3.64-3.64a6.66 6.66 0 1 0-9.42 9.42l8.34 8.34a1 1 0 0 0 1.41-1.42l-8.34-8.33a4.66 4.66 0 0 1 6.42-6.76l.18.17L16.59 9H12a1 1 0 0 0-1 .88V10a1 1 0 0 0 .88 1H19a1 1 0 0 0 1-.88V3a1 1 0 0 0-2-.11v4.7l-3.64-3.64z" />
 </vector>

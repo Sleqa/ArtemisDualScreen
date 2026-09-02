@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Design Icons "chat" (Pictogrammers), Apache License 2.0 -->
+<!-- Fluent UI System Icons "comment_24_filled" (Microsoft), MIT License -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +7,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,3C17.5,3 22,6.58 22,11C22,15.42 17.5,19 12,19C10.76,19 9.57,18.82 8.47,18.5C5.55,21 2,21 2,21C4.33,18.67 4.7,17.1 4.75,16.5C3.05,15.07 2,13.13 2,11C2,6.58 6.5,3 12,3Z" />
+        android:pathData="M5.25 3A3.25 3.25 0 0 0 2 6.25v8.5C2 16.55 3.46 18 5.25 18H6v2.75a1.25 1.25 0 0 0 2 1L13 18h5.75c1.8 0 3.25-1.46 3.25-3.25v-8.5C22 4.45 20.54 3 18.75 3z" />
 </vector>

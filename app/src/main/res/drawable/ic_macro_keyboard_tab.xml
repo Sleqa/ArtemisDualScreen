@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Design Icons "keyboard-tab" (Pictogrammers), Apache License 2.0 -->
+<!-- Fluent UI System Icons "keyboard_tab_24_filled" (Microsoft), MIT License -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +7,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M20,18H22V6H20M11.59,7.41L15.17,11H1V13H15.17L11.59,16.58L13,18L19,12L13,6L11.59,7.41Z" />
+        android:pathData="m18.2 11.3-6.5-6.5a1 1 0 0 0-1.49 1.31l.08.1L15.1 11H4a1 1 0 0 0-1 .88V12a1 1 0 0 0 .88 1H15.1l-4.8 4.8a1 1 0 0 0-.08 1.31l.08.1a1 1 0 0 0 1.32.08l.1-.08 6.5-6.5a1 1 0 0 0 .08-1.32zl-6.5-6.5zm2.8 7.2v-13a1 1 0 1 0-2 0v13a1 1 0 1 0 2 0" />
 </vector>

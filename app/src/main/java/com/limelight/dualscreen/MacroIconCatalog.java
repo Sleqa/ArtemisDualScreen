@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The icons a macro can wear on its circular key. Ids are the upstream Material Design Icons
- * names (Pictogrammers, Apache License 2.0) and are what gets written into the macro file, so
- * they stay readable and stable across releases.
+ * The icons a macro can wear on its key. Ids are stable strings written into the macro file, so a
+ * macro keeps its icon across releases even when the artwork behind an id changes; the drawables
+ * themselves are Fluent UI System Icons (Microsoft, MIT License).
  */
 public final class MacroIconCatalog {
 

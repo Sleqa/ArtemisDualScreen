@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Design Icons "bullseye" (Pictogrammers), Apache License 2.0 -->
+<!-- Fluent UI System Icons "target_arrow_24_filled" (Microsoft), MIT License -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +7,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10Z" />
+        android:pathData="M21.78 6.78a.75.75 0 0 0-.53-1.28H18.5V2.75a.75.75 0 0 0-1.28-.53l-2.5 2.5a.8.8 0 0 0-.22.53v2.84l-1.98 1.98a2 2 0 1 0 1.41 1.41l1.98-1.98h2.84q.31 0 .53-.22zM12 2q1.81 0 3.42.6l-1.4 1.41-.18.2A8.02 8.02 0 0 0 4 12a8 8 0 1 0 15.79-1.84l.2-.17 1.4-1.41q.6 1.6.61 3.42A10 10 0 1 1 12 2m0 4q.78 0 1.5.19v1.48l-.41.42-.05.05a4 4 0 1 0 2.82 2.82l.05-.05.42-.41h1.48A6.01 6.01 0 1 1 12 6" />
 </vector>

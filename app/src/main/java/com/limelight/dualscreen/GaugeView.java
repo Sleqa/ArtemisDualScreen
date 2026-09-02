@@ -11,10 +11,14 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
+import androidx.core.content.res.ResourcesCompat;
+
+import com.limelight.R;
+
 /**
- * Circular ring gauge in the style of the AYN Thor's bottom-screen readouts: a faint full-circle
- * track, an accent-colored arc that sweeps clockwise from 12 o'clock, a dot marking the arc head,
- * and the metric's name / value / unit stacked in the middle.
+ * Fluent-style progress ring: a faint full-circle track with an accent arc sweeping clockwise
+ * from 12 o'clock and the metric's name, value and unit stacked in the middle. Modelled on the
+ * ring Windows 11 uses for determinate progress - thin stroke, rounded cap, no ornament.
  */
 public class GaugeView extends View {
 
@@ -22,7 +26,6 @@ public class GaugeView extends View {
 
     private final Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint arcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint valuePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint unitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -52,32 +55,32 @@ public class GaugeView extends View {
 
     private void init() {
         trackPaint.setStyle(Paint.Style.STROKE);
-        trackPaint.setColor(0x24FFFFFF);
+        trackPaint.setColor(0x1AFFFFFF);
 
         arcPaint.setStyle(Paint.Style.STROKE);
         arcPaint.setStrokeCap(Paint.Cap.ROUND);
         arcPaint.setColor(accentColor);
 
-        dotPaint.setStyle(Paint.Style.FILL);
-        dotPaint.setColor(Color.WHITE);
+        Typeface uiFont = ResourcesCompat.getFont(getContext(), R.font.win_ui);
 
-        labelPaint.setColor(0x99FFFFFF);
+        labelPaint.setColor(0xC5FFFFFF);
         labelPaint.setTextAlign(Paint.Align.CENTER);
-        labelPaint.setTypeface(Typeface.DEFAULT);
+        labelPaint.setTypeface(uiFont != null ? uiFont : Typeface.DEFAULT);
 
         valuePaint.setColor(Color.WHITE);
         valuePaint.setTextAlign(Paint.Align.CENTER);
-        valuePaint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL));
+        valuePaint.setTypeface(uiFont != null ? uiFont : Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL));
 
-        unitPaint.setColor(0x80FFFFFF);
+        unitPaint.setColor(0x8AFFFFFF);
         unitPaint.setTextAlign(Paint.Align.CENTER);
+        unitPaint.setTypeface(uiFont != null ? uiFont : Typeface.DEFAULT);
 
         applyMetrics(48f * getResources().getDisplayMetrics().density);
     }
 
     /** Ring and type are sized from the view itself so one gauge style works at any diameter. */
     private void applyMetrics(float size) {
-        strokeWidth = Math.max(size * 0.058f, 2f);
+        strokeWidth = Math.max(size * 0.05f, 2f);
         trackPaint.setStrokeWidth(strokeWidth);
         arcPaint.setStrokeWidth(strokeWidth);
         labelPaint.setTextSize(size * 0.145f);
@@ -167,15 +170,8 @@ public class GaugeView extends View {
             }
         }
 
-        // Dot marking the head of the arc (top of the circle when empty)
         float centerX = arcBounds.centerX();
         float centerY = arcBounds.centerY();
-        float radius = arcBounds.width() / 2f;
-        double headAngle = Math.toRadians(START_ANGLE + sweep);
-        float dotX = centerX + (float) Math.cos(headAngle) * radius;
-        float dotY = centerY + (float) Math.sin(headAngle) * radius;
-        dotPaint.setColor(sweep > 0f ? Color.WHITE : 0x40FFFFFF);
-        canvas.drawCircle(dotX, dotY, strokeWidth * 0.62f, dotPaint);
 
         // Center stack: label / value / unit
         float valueBaseline = centerY + valuePaint.getTextSize() * 0.36f;

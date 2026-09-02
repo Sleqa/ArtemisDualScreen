@@ -31,12 +31,14 @@
     </RelativeLayout>
     <TextView
         android:id="@+id/grid_text"
+            android:fontFamily="@font/win_ui"
         android:layout_width="125dp"
         android:layout_height="wrap_content"
         android:layout_below="@id/grid_image_layout"
         android:layout_marginTop="10dp"
         android:layout_centerHorizontal="true"
         android:gravity="center"
-        android:textSize="18sp" >
+        android:textColor="@color/win_text_primary"
+            android:textSize="14sp" >
     </TextView>
 </RelativeLayout>

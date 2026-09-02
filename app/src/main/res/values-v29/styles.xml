@@ -1,9 +1,34 @@
 <resources>
+    <!--
+        API 29+ base theme. It replaces AppBaseTheme outright, so it carries the same
+        Windows 11 theme tokens as res/values/styles.xml on top of the Material3 parent.
+    -->
     <style name="AppBaseTheme" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <!-- Avoid some systems like MIUI which break the visibility of games title -->
         <item name="android:forceDarkAllowed">false</item>
+        <!-- Windows 11 (Fluent 2) tokens - see values/colors_win.xml -->
+        <item name="android:fontFamily">@font/win_ui</item>
+        <item name="fontFamily">@font/win_ui</item>
+
+        <item name="colorPrimary">@color/win_accent</item>
+        <item name="colorPrimaryDark">@color/win_solid_background_secondary</item>
+        <item name="colorSecondary">@color/win_accent</item>
+        <item name="colorAccent">@color/win_accent</item>
+        <item name="colorOnPrimary">@color/win_text_on_accent</item>
+        <item name="colorSurface">@color/win_card_fill</item>
+        <item name="colorOnSurface">@color/win_text_primary</item>
+        <item name="android:colorBackground">@color/win_solid_background_base</item>
+        <item name="android:textColorPrimary">@color/win_text_primary</item>
+        <item name="android:textColorSecondary">@color/win_text_secondary</item>
+        <item name="android:textColorTertiary">@color/win_text_tertiary</item>
+        <item name="android:textColorHint">@color/win_text_tertiary</item>
+        <item name="colorControlNormal">@color/win_text_secondary</item>
+        <item name="colorControlActivated">@color/win_accent</item>
+        <item name="colorControlHighlight">@color/win_control_ripple</item>
+        <item name="alertDialogTheme">@style/Theme.Win.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/Theme.Win.Dialog</item>
     </style>
 
     <style name="SettingsTheme" parent="AppTheme">

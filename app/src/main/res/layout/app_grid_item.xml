@@ -8,9 +8,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_margin="10dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="8dp"
-        app:cardMaxElevation="8dp">
+        app:cardBackgroundColor="@color/win_card_fill"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        app:cardMaxElevation="0dp">
 
         <ImageView
             android:id="@+id/grid_image"
@@ -33,6 +34,7 @@
 
             <TextView
                 android:id="@+id/grid_text"
+            android:fontFamily="@font/win_ui"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_below="@id/grid_overlay"
@@ -40,7 +42,8 @@
                 android:gravity="center|center_vertical"
                 android:background="#00FFFFFF"
                 android:textAlignment="center"
-                android:textSize="18sp" />
+                android:textColor="@color/win_text_primary"
+                android:textSize="14sp" />
         </RelativeLayout>
 
     </androidx.cardview.widget.CardView>

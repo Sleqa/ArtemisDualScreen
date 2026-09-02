@@ -9,7 +9,6 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.limelight.R;
 
 public class MacroListActivity extends AppCompatActivity implements MacroAdapter.OnMacrosChangedListener {
@@ -37,8 +36,8 @@ public class MacroListActivity extends AppCompatActivity implements MacroAdapter
 
         emptyState = findViewById(R.id.emptyState);
 
-        FloatingActionButton fab = findViewById(R.id.addMacroFab);
-        fab.setOnClickListener(v -> startActivity(new Intent(this, EditMacroActivity.class)));
+        View addMacroButton = findViewById(R.id.addMacroFab);
+        addMacroButton.setOnClickListener(v -> startActivity(new Intent(this, EditMacroActivity.class)));
 
         updateEmptyState();
     }

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fluent 2 geometry: 8dp on surfaces (cards, dialogs, flyouts), 4dp on controls -->
+<resources>
+    <dimen name="win_radius_surface">8dp</dimen>
+    <dimen name="win_radius_control">4dp</dimen>
+    <dimen name="win_stroke">1dp</dimen>
+    <dimen name="win_gap_small">4dp</dimen>
+    <dimen name="win_gap">8dp</dimen>
+    <dimen name="win_gap_large">12dp</dimen>
+    <dimen name="win_text_caption">11sp</dimen>
+    <dimen name="win_text_body">14sp</dimen>
+    <dimen name="win_text_subtitle">16sp</dimen>
+</resources>

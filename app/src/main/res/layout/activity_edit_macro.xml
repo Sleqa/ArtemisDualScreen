@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Macro editor laid out like a Windows 11 settings page: a stack of cards, each holding one
+     setting with its label on the left and its control on the right. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/win_solid_background_base"
     android:orientation="vertical">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize" />
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/win_solid_background_secondary" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -20,25 +23,55 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Icon -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_win_card"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:minHeight="68dp"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="10dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/win_ui"
+                        android:text="@string/macro_icon_label"
+                        android:textColor="@color/win_text_primary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/win_ui"
+                        android:text="@string/macro_icon_summary"
+                        android:textColor="@color/win_text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
                 <FrameLayout
                     android:id="@+id/macroIconPicker"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_macro_circle"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_win_control"
                     android:clickable="true"
                     android:focusable="true">
 
                     <ImageView
                         android:id="@+id/macroIconPreview"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
                         android:layout_gravity="center"
                         android:contentDescription="@string/macro_icon_label" />
 
@@ -46,95 +79,115 @@
                         android:id="@+id/macroIconEmpty"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
+                        android:fontFamily="@font/win_ui"
                         android:gravity="center"
                         android:text="@string/macro_icon_none_glyph"
-                        android:textColor="#99FFFFFF"
-                        android:textSize="20sp" />
+                        android:textColor="@color/win_text_tertiary"
+                        android:textSize="18sp" />
                 </FrameLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/macro_icon_label"
-                        android:textColor="#CCCCCC"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/macro_icon_summary"
-                        android:textColor="#888888"
-                        android:textSize="12sp" />
-                </LinearLayout>
             </LinearLayout>
 
-            <com.google.android.material.textfield.TextInputLayout
+            <!-- Name -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/macro_name_hint">
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_win_card"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="12dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/macroNameInput"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/win_ui"
+                    android:text="@string/macro_name_hint"
+                    android:textColor="@color/win_text_primary"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLines="1" />
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/macro_name_hint">
 
-            </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/macroNameInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/win_ui"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:textColor="@color/win_text_primary" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/macro_selected_keys_label"
-                android:textColor="#CCCCCC"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
 
-            <TextView
-                android:id="@+id/noKeysSelectedText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/macro_no_keys_selected"
-                android:textColor="#888888"
-                android:textSize="14sp" />
-
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/selectedKeysChipGroup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"
-                android:background="#33FFFFFF" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/macro_pick_keys_label"
-                android:textColor="#CCCCCC"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
+            <!-- Selected keys -->
             <LinearLayout
-                android:id="@+id/keyPickerContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_win_card"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/win_ui"
+                    android:text="@string/macro_selected_keys_label"
+                    android:textColor="@color/win_text_primary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/noKeysSelectedText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/win_ui"
+                    android:text="@string/macro_no_keys_selected"
+                    android:textColor="@color/win_text_secondary"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/selectedKeysChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <!-- Key picker -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_win_card"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/win_ui"
+                    android:text="@string/macro_pick_keys_label"
+                    android:textColor="@color/win_text_primary"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:id="@+id/keyPickerContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
 
         </LinearLayout>
 

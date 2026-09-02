@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Windows 11 (Fluent 2) dark palette. Names follow the Fluent design token names so the
+    intent of each colour stays obvious: solid backgrounds for window grounds, layer/card
+    fills for surfaces stacked on them, control fills for interactive elements, and the
+    system accent for emphasis.
+-->
+<resources>
+    <!-- Window grounds -->
+    <color name="win_solid_background_base">#FF202020</color>
+    <color name="win_solid_background_secondary">#FF1C1C1C</color>
+    <color name="win_solid_background_tertiary">#FF282828</color>
+
+    <!-- Surfaces stacked on the ground -->
+    <color name="win_layer_fill">#FF2D2D2D</color>
+    <color name="win_card_fill">#FF2B2B2B</color>
+    <color name="win_card_fill_secondary">#FF323232</color>
+    <color name="win_card_stroke">#1AFFFFFF</color>
+    <color name="win_divider_stroke">#14FFFFFF</color>
+
+    <!-- Interactive control fills -->
+    <color name="win_control_fill">#FF303030</color>
+    <color name="win_control_fill_hover">#FF383838</color>
+    <color name="win_control_fill_pressed">#FF2A2A2A</color>
+    <color name="win_control_stroke">#18FFFFFF</color>
+    <color name="win_control_ripple">#26FFFFFF</color>
+
+    <!-- Text -->
+    <color name="win_text_primary">#FFFFFFFF</color>
+    <color name="win_text_secondary">#C5FFFFFF</color>
+    <color name="win_text_tertiary">#8AFFFFFF</color>
+    <color name="win_text_disabled">#5CFFFFFF</color>
+    <color name="win_text_on_accent">#FF000000</color>
+
+    <!-- System accent (Windows default blue, dark-theme shade) -->
+    <color name="win_accent">#FF60CDFF</color>
+    <color name="win_accent_secondary">#FF4CC2FF</color>
+    <color name="win_accent_tertiary">#FF0078D4</color>
+    <color name="win_accent_subtle">#2960CDFF</color>
+
+    <!-- Status colours used by the readouts -->
+    <color name="win_success">#FF6CCB5F</color>
+    <color name="win_caution">#FFFCE100</color>
+    <color name="win_critical">#FFFF99A4</color>
+</resources>

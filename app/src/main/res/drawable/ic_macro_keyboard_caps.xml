@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Design Icons "keyboard-caps" (Pictogrammers), Apache License 2.0 -->
+<!-- Fluent UI System Icons "keyboard_shift_uppercase_24_filled" (Microsoft), MIT License -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +7,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M6,18H18V16H6M12,8.41L16.59,13L18,11.58L12,5.58L6,11.58L7.41,13L12,8.41Z" />
+        android:pathData="M13.32 2.6c-.7-.8-1.95-.8-2.64 0l-8.25 9.5A1.75 1.75 0 0 0 3.75 15H7v2.25c0 .97.78 1.75 1.75 1.75h6.5c.97 0 1.75-.78 1.75-1.75V15h3.24c1.5 0 2.3-1.76 1.33-2.9zM7.75 20.5a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5z" />
 </vector>

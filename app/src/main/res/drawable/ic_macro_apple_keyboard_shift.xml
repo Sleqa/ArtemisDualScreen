@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Design Icons "apple-keyboard-shift" (Pictogrammers), Apache License 2.0 -->
+<!-- Fluent UI System Icons "keyboard_shift_24_filled" (Microsoft), MIT License -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,5 +7,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M15,18V12H17.17L12,6.83L6.83,12H9V18H15M12,4L22,14H17V20H7V14H2L12,4Z" />
+        android:pathData="M10.68 2.6c.7-.8 1.94-.8 2.64 0l8.25 9.5c.98 1.14.17 2.9-1.33 2.9H17v5.25c0 .97-.78 1.75-1.75 1.75h-6.5C7.78 22 7 21.22 7 20.25V15H3.75c-1.5 0-2.3-1.76-1.32-2.9z" />
 </vector>

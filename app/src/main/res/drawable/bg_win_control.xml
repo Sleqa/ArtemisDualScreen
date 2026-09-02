@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fluent control (button, tile): 4dp corners, hairline stroke, pressed/hover fills -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/win_control_ripple">
+    <item>
+        <selector>
+            <item android:state_pressed="true">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/win_control_fill_pressed" />
+                    <stroke
+                        android:width="@dimen/win_stroke"
+                        android:color="@color/win_control_stroke" />
+                    <corners android:radius="@dimen/win_radius_control" />
+                </shape>
+            </item>
+            <item android:state_selected="true">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/win_accent_subtle" />
+                    <stroke
+                        android:width="@dimen/win_stroke"
+                        android:color="@color/win_accent" />
+                    <corners android:radius="@dimen/win_radius_control" />
+                </shape>
+            </item>
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/win_control_fill" />
+                    <stroke
+                        android:width="@dimen/win_stroke"
+                        android:color="@color/win_control_stroke" />
+                    <corners android:radius="@dimen/win_radius_control" />
+                </shape>
+            </item>
+        </selector>
+    </item>
+</ripple>

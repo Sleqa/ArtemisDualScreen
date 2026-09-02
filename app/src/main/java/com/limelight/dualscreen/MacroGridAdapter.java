@@ -50,7 +50,7 @@ public class MacroGridAdapter extends RecyclerView.Adapter<MacroGridAdapter.Macr
     @NonNull
     @Override
     public MacroButtonViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.row_macro_circle, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.row_macro_tile, parent, false);
         return new MacroButtonViewHolder(view);
     }
 

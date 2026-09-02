@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Windows 11 settings-card row: icon, title over a caption, trailing icon actions -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginBottom="4dp"
+    android:background="@drawable/bg_win_card"
+    android:gravity="center_vertical"
+    android:minHeight="60dp"
     android:orientation="horizontal"
-    android:padding="16dp"
-    android:background="?android:attr/selectableItemBackground"
-    android:gravity="center_vertical">
+    android:paddingStart="16dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="10dp">
 
     <ImageView
         android:id="@+id/macroIcon"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
         android:layout_marginEnd="16dp"
         android:contentDescription="@string/macro_icon_label"
         android:visibility="gone" />
@@ -25,36 +31,44 @@
             android:id="@+id/macroName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold"
+            android:ellipsize="end"
+            android:fontFamily="@font/win_ui"
             android:singleLine="true"
-            android:ellipsize="end" />
+            android:textColor="@color/win_text_primary"
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/macroKeysSummary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="#CCCCCC"
+            android:layout_marginTop="2dp"
+            android:fontFamily="@font/win_ui"
+            android:textColor="@color/win_text_secondary"
             android:textSize="12sp" />
 
     </LinearLayout>
 
     <ImageButton
         android:id="@+id/editMacro"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_win_control"
         android:contentDescription="@string/macro_edit_content_description"
-        android:src="@drawable/ic_edit" />
+        android:padding="8dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_edit"
+        android:tint="@color/win_text_primary" />
 
     <ImageButton
         android:id="@+id/deleteMacro"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/bg_win_control"
         android:contentDescription="@string/macro_delete_content_description"
-        android:src="@drawable/ic_delete" />
+        android:padding="8dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_delete"
+        android:tint="@color/win_text_primary" />
 
 </LinearLayout>

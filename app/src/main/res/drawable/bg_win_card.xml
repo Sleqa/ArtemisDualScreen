@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fluent card: layer fill with a hairline stroke and 8dp corners -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/win_card_fill" />
+    <stroke
+        android:width="@dimen/win_stroke"
+        android:color="@color/win_card_stroke" />
+    <corners android:radius="@dimen/win_radius_surface" />
+</shape>
