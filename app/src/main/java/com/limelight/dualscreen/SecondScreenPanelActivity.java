@@ -18,6 +18,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
@@ -28,6 +29,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
@@ -83,6 +85,10 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private static final float LATENCY_GOOD_MS = 10f;
     private static final float LATENCY_FAIR_MS = 18f;
     private static final float LATENCY_FULL_MS = 100f;
+    // A single leg is a fraction of the whole journey, so its ring runs on a tighter scale
+    private static final float LEG_GOOD_MS = 5f;
+    private static final float LEG_FAIR_MS = 10f;
+    private static final float LEG_FULL_MS = 50f;
     private static final int COLOR_LATENCY_GOOD = 0xFF6CCB5F;
     private static final int COLOR_LATENCY_FAIR = 0xFFFCE100;
     private static final int COLOR_LATENCY_BAD = 0xFFFF99A4;
@@ -133,6 +139,13 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private GaugeView gpuGauge;
     private GaugeView ramGauge;
     private HostStatsPoller hostStatsPoller;
+    private AlertDialog latencyDialog;
+    private GaugeView netGauge;
+    private GaugeView hostGauge;
+    private GaugeView decodeGauge;
+    private float lastNetMs = -1f;
+    private float lastHostMs = -1f;
+    private float lastDecodeMs = -1f;
     private boolean trackpadEnabled = false;
     private String lastHostStatsWarning;
     private final PerfOverlayListener panelPerfListener = this::onPerfTextUpdate;
@@ -215,6 +228,10 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         stopHostStatsPolling();
+        if (latencyDialog != null) {
+            latencyDialog.dismiss();
+            latencyDialog = null;
+        }
         if (Game.instance != null) {
             Game.instance.setSecondScreenPerfListener(null);
             // Don't leave the stream stuck in the trackpad mouse mode this panel switched it to
@@ -309,18 +326,21 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
                 v -> startActivity(new Intent(this, MacroListActivity.class))));
         rootLayout.addView(bottomBar);
 
-        // Bottom-right: swipe-up-to-quit handle. Deliberately not a tap target -
-        // ending the stream requires dragging it fully up and releasing there, so it
-        // can't fire by accident (sliding back down before release cancels).
+        // Bottom-right: drag-to-quit handle. Deliberately not a tap target - ending the
+        // stream means dragging it inward across the full travel and releasing it there,
+        // so it can't fire by accident (sliding back to the edge before release cancels).
         LinearLayout quitBar = createButtonContainer(Gravity.BOTTOM | Gravity.END);
         quitBar.setFocusable(false);
-        // Let the handle render outside the container's bounds while dragged upward
-        quitBar.setClipChildren(false);
-        quitBar.setClipToPadding(false);
         ImageButton quitButton = createCommandButton(R.drawable.ic_macro_close,
                 R.string.second_screen_quit_hint, null);
         quitButton.setColorFilter(ContextCompat.getColor(this, R.color.win_critical));
-        attachSwipeUpToQuit(quitButton);
+        // Same inset on every side, so the handle sits inside the screen rather than
+        // flush against its edge
+        LinearLayout.LayoutParams quitParams =
+                (LinearLayout.LayoutParams) quitButton.getLayoutParams();
+        quitParams.setMargins(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8));
+        quitButton.setLayoutParams(quitParams);
+        attachDragToQuit(quitButton);
         quitBar.addView(quitButton);
         rootLayout.addView(quitBar);
 
@@ -427,6 +447,13 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
 
         fpsGauge = addGauge(getString(R.string.second_screen_gauge_fps), COLOR_FPS);
         latencyGauge = addGauge(getString(R.string.second_screen_gauge_latency), COLOR_LATENCY_GOOD);
+        latencyGauge.setContentDescription(getString(R.string.second_screen_latency_title));
+        latencyGauge.setOnClickListener(v -> {
+            // In trackpad mode the whole surface belongs to the mouse, so leave it alone
+            if (!trackpadEnabled) {
+                showLatencyBreakdown();
+            }
+        });
         cpuGauge = addGauge(getString(R.string.second_screen_gauge_cpu), COLOR_CPU);
         gpuGauge = addGauge(getString(R.string.second_screen_gauge_gpu), COLOR_GPU);
         ramGauge = addGauge(getString(R.string.second_screen_gauge_ram), COLOR_RAM);
@@ -616,6 +643,11 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
             decode = parseFloatOrDefault(matchGroup(text, "/\\s*([\\d.,]+)ms"), decode);
         }
 
+        lastNetMs = net;
+        lastHostMs = host;
+        lastDecodeMs = decode;
+        refreshLatencyBreakdown();
+
         float total = 0f;
         boolean any = false;
         for (float leg : new float[] {net, host, decode}) {
@@ -631,6 +663,83 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
         latencyGauge.setAccentColor(latencyColor(total));
         latencyGauge.setReading(String.format(Locale.getDefault(), "%.0f", total),
                 getString(R.string.second_screen_gauge_unit_ms), total / LATENCY_FULL_MS);
+    }
+
+    /**
+     * Flyout breaking the latency ring into the three legs it sums: the network round trip,
+     * the host's processing time and this device's decode time. The rings update live while
+     * the flyout is open, and run on a tighter scale than the total since one leg is only
+     * ever part of the journey.
+     */
+    private void showLatencyBreakdown() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+        int padding = dpToPx(16);
+        row.setPadding(padding, dpToPx(8), padding, padding);
+
+        netGauge = createBreakdownGauge(row, R.string.second_screen_gauge_net);
+        hostGauge = createBreakdownGauge(row, R.string.second_screen_gauge_host);
+        decodeGauge = createBreakdownGauge(row, R.string.second_screen_gauge_decode);
+
+        latencyDialog = new AlertDialog.Builder(this, R.style.Theme_Win_Dialog)
+                .setTitle(R.string.second_screen_latency_title)
+                .setMessage(R.string.second_screen_latency_summary)
+                .setView(row)
+                .setPositiveButton(R.string.second_screen_close, null)
+                .setOnDismissListener(dialog -> {
+                    latencyDialog = null;
+                    netGauge = null;
+                    hostGauge = null;
+                    decodeGauge = null;
+                })
+                .create();
+        latencyDialog.show();
+        refreshLatencyBreakdown();
+    }
+
+    private GaugeView createBreakdownGauge(LinearLayout row, int labelRes) {
+        GaugeView gauge = new GaugeView(this);
+        gauge.setLabel(getString(labelRes));
+        gauge.setAccentColor(COLOR_LATENCY_GOOD);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dpToPx(84), dpToPx(84));
+        params.setMargins(dpToPx(4), 0, dpToPx(4), 0);
+        gauge.setLayoutParams(params);
+        row.addView(gauge);
+        return gauge;
+    }
+
+    private void refreshLatencyBreakdown() {
+        if (latencyDialog == null) {
+            return;
+        }
+        applyLegReading(netGauge, lastNetMs);
+        applyLegReading(hostGauge, lastHostMs);
+        applyLegReading(decodeGauge, lastDecodeMs);
+    }
+
+    private void applyLegReading(GaugeView gauge, float ms) {
+        if (gauge == null) {
+            return;
+        }
+        if (ms < 0f) {
+            gauge.clearReading();
+            return;
+        }
+        gauge.setAccentColor(legColor(ms));
+        gauge.setReading(String.format(Locale.getDefault(), ms < 10f ? "%.1f" : "%.0f", ms),
+                getString(R.string.second_screen_gauge_unit_ms), ms / LEG_FULL_MS);
+    }
+
+    private static int legColor(float ms) {
+        if (ms < LEG_GOOD_MS) {
+            return COLOR_LATENCY_GOOD;
+        }
+        if (ms < LEG_FAIR_MS) {
+            return COLOR_LATENCY_FAIR;
+        }
+        float t = Math.min((ms - LEG_FAIR_MS) / (LEG_FULL_MS - LEG_FAIR_MS), 1f);
+        return blendColor(COLOR_LATENCY_BAD, COLOR_LATENCY_WORST, t);
     }
 
     private static int latencyColor(float totalMs) {
@@ -724,6 +833,8 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     private void toggleTrackpad() {
         trackpadEnabled = !trackpadEnabled;
         trackpadButton.setAlpha(trackpadEnabled ? 1.0f : 0.5f);
+        // A clickable child would swallow touches meant for the trackpad surface
+        latencyGauge.setClickable(!trackpadEnabled);
         if (trackpadEnabled) {
             if (Game.instance != null && !mouseModeOverridden) {
                 previousMouseMode = Game.instance.getMouseMode();
@@ -799,55 +910,69 @@ public class SecondScreenPanelActivity extends AppCompatActivity {
     }
 
     /**
-     * Arms the quit handle: drag it up the full travel distance AND release it there to
-     * end the streaming session (Game.disconnect() - the host app keeps running). The
-     * handle follows the finger and brightens toward the trigger point; releasing it
-     * anywhere short of the limit (including sliding back down) just springs it back.
+     * Arms the quit handle: drag it inward (right to left, toward the middle of the panel)
+     * across the full travel distance AND release it there to end the streaming session
+     * (Game.disconnect() - the host app keeps running). The handle tracks the finger and
+     * brightens as it approaches the trigger point; releasing anywhere short of it, or
+     * sliding back toward the edge first, springs the handle home instead.
      */
     @SuppressLint("ClickableViewAccessibility")
-    private void attachSwipeUpToQuit(View handle) {
-        final int triggerDistance = dpToPx(120);
+    private void attachDragToQuit(View handle) {
+        final int triggerDistance = dpToPx(96);
         handle.setOnTouchListener(new View.OnTouchListener() {
-            private float downRawY;
+            private float downRawX;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
-                        downRawY = event.getRawY();
+                        downRawX = event.getRawX();
+                        v.animate().cancel();
                         return true;
                     case MotionEvent.ACTION_MOVE: {
-                        float dy = event.getRawY() - downRawY; // negative when swiping up
-                        float drag = Math.max(Math.min(dy, 0), -triggerDistance);
-                        v.setTranslationY(drag);
-                        v.setAlpha(0.5f + 0.5f * (-drag / triggerDistance));
-                        // Pop the handle larger once releasing would trigger the quit
-                        boolean armed = dy <= -triggerDistance;
-                        float scale = armed ? 1.2f : 1.0f;
+                        float dx = event.getRawX() - downRawX; // negative when dragging inward
+                        float drag = Math.max(Math.min(dx, 0), -triggerDistance);
+                        float progress = -drag / triggerDistance;
+                        v.setTranslationX(drag);
+                        v.setAlpha(0.6f + 0.4f * progress);
+                        // Swell slightly toward the trigger point, so the commit is visible
+                        // without the handle jumping a size at the very end
+                        float scale = 1.0f + 0.15f * progress;
                         v.setScaleX(scale);
                         v.setScaleY(scale);
                         return true;
                     }
                     case MotionEvent.ACTION_UP: {
-                        float dy = event.getRawY() - downRawY;
-                        if (dy <= -triggerDistance) {
+                        float dx = event.getRawX() - downRawX;
+                        if (dx <= -triggerDistance) {
                             if (Game.instance != null) {
                                 Game.instance.disconnect();
                             }
                             finish();
                         } else {
-                            v.animate().translationY(0).alpha(0.5f).scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+                            springHandleHome(v);
                         }
                         return true;
                     }
                     case MotionEvent.ACTION_CANCEL:
-                        v.animate().translationY(0).alpha(0.5f).scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+                        springHandleHome(v);
                         return true;
                     default:
                         return false;
                 }
             }
         });
+    }
+
+    private void springHandleHome(View handle) {
+        handle.animate()
+                .translationX(0f)
+                .alpha(1.0f)
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .setDuration(180)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
     }
 
     private LinearLayout createButtonContainer(int gravity) {
