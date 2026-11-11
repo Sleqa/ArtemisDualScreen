@@ -2,13 +2,15 @@
 
 This is a fork of [Artemis](https://github.com/ClassicOldSong/moonlight-android) (itself a fork of Moonlight) for Android, focused on adding native support for **dual-screen Android devices** such as the AYN Odin 2 / Thor.
 
-**Goal:** the main screen behaves exactly like stock Artemis while streaming, while the device's secondary screen becomes a dedicated companion panel with:
+**Goal:** the main screen behaves exactly like stock Artemis while streaming, while the device's secondary screen becomes a dedicated companion with a persistent status bar and four tabs:
 
-- A grid of custom macro buttons (e.g. Alt+Tab, Ctrl+Shift+Esc) that you create and edit in-app
-- A reliable soft-keyboard toggle that forwards typed input straight into the stream
-- A trackpad mode that turns the second screen into a mouse trackpad for the host PC
-- A simplified performance overlay (resolution/FPS, network latency, host + client decode time)
-- A swipe-up-to-quit handle to end the session without touching the main screen
+- **Status bar:** clock, host name, a live fps · latency · resolution chip, device battery, and a hold-to-disconnect button
+- **Touchpad:** a glowing dot-grid trackpad (relative or absolute), tap and two-finger right click, two-finger scroll, double-tap-drag, a scroll strip and big click buttons
+- **Keyboard:** a full PC keyboard with sticky Ctrl/Alt/Shift/Win, plus a text box for typing longer strings into the stream
+- **Keybinds:** preset shortcuts (Alt+Tab, Win, Alt+F4, Ctrl+Shift+Esc, Win+G, …) and your own custom combos, sent as a tap or held while pressed; reorder, edit and delete in place
+- **Stats:** frame rate, network, host and decode latency with live trend lines, plus resolution, codec, bandwidth, drops, decoder and session time
+
+Turn it on in Settings → **Second-screen companion**. Until the stream connects, the second screen shows a large clock and battery status.
 
 > **Disclaimer:** The dual-screen features in this fork were built with AI assistance (Claude, via Claude Code). They've been tested on-device, but have not been reviewed by the upstream Artemis/Moonlight maintainers, and bugs may exist. Use at your own discretion, and please report issues on [this fork's repository](https://github.com/Sleqa/ArtemisDualScreen/issues) rather than upstream.
 
