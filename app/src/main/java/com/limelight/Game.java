@@ -3927,25 +3927,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
-    // Secondary perf-stats consumer (the second-screen panel's overlay). Registering it
-    // forces decoder stat emission on even when the main-screen HUD is disabled, without
-    // making the main-screen overlay visible.
-    private PerfOverlayListener secondScreenPerfListener;
-    private boolean perfOverlayForcedBySecondScreen = false;
-
-    public void setSecondScreenPerfListener(PerfOverlayListener listener) {
-        secondScreenPerfListener = listener;
-        if (listener != null) {
-            if (!prefConfig.enablePerfOverlay) {
-                prefConfig.enablePerfOverlay = true;
-                perfOverlayForcedBySecondScreen = true;
-            }
-        } else if (perfOverlayForcedBySecondScreen) {
-            prefConfig.enablePerfOverlay = false;
-            perfOverlayForcedBySecondScreen = false;
-        }
-    }
-
     @Override
     public void onPerfUpdate(final String text) {
         runOnUiThread(new Runnable() {
@@ -3955,9 +3936,6 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     performanceOverlayLite.setText(text);
                 }else{
                     performanceOverlayBig.setText(text);
-                }
-                if (secondScreenPerfListener != null) {
-                    secondScreenPerfListener.onPerfUpdate(text);
                 }
             }
         });
@@ -4172,24 +4150,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         }
     }
 
-    // Tracks the last mode passed to applyMouseMode so callers (e.g. the second-screen
-    // panel's temporary trackpad override) can save and restore the active mode.
-    private int currentMouseMode = 0;
-
-    public int getMouseMode() {
-        return currentMouseMode;
-    }
-
-    /**
-     * Applies a mouse mode without persisting it (unlike selectMouseMode's dialog,
-     * which may save the choice). Mode indices match the mouse_mode_names array.
-     */
-    public void setMouseMode(int mode) {
-        applyMouseMode(mode);
-    }
-
     private void applyMouseMode(int mode) {
-        currentMouseMode = mode;
         switch (mode) {
             case 0: // Multi-touch
                 prefConfig.enableMultiTouchScreen = true;
