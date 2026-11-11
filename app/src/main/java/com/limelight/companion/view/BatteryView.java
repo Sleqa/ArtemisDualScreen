@@ -11,7 +11,7 @@ import android.view.View;
 
 import com.limelight.R;
 
-/** Battery glyph whose fill animates to the level; pulses gently while charging. */
+/** Battery glyph whose fill animates to the level; accent-coloured while charging. */
 public class BatteryView extends View {
 
     private final float d;
@@ -19,9 +19,9 @@ public class BatteryView extends View {
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF r = new RectF();
     private final Path bolt = new Path();
-    private float level = 0f, shown = 0f, pulse = 1f;
+    private float level = 0f, shown = 0f;
     private boolean charging;
-    private ValueAnimator levelAnim, pulseAnim;
+    private ValueAnimator levelAnim;
     private final int cNormal, cLow, cCharging;
 
     public BatteryView(Context context, AttributeSet attrs) {
@@ -36,22 +36,11 @@ public class BatteryView extends View {
     }
 
     public void setState(float level01, boolean charging) {
-        this.level = Math.max(0f, Math.min(1f, level01));
-        if (this.charging != charging) {
-            this.charging = charging;
-            if (charging) {
-                pulseAnim = ValueAnimator.ofFloat(1f, 0.55f, 1f).setDuration(1800);
-                pulseAnim.setRepeatCount(ValueAnimator.INFINITE);
-                pulseAnim.addUpdateListener(a -> {
-                    pulse = (float) a.getAnimatedValue();
-                    invalidate();
-                });
-                pulseAnim.start();
-            } else if (pulseAnim != null) {
-                pulseAnim.cancel();
-                pulse = 1f;
-            }
-        }
+        float clamped = Math.max(0f, Math.min(1f, level01));
+        if (levelAnim != null && clamped == this.level && charging == this.charging) return;
+        this.level = clamped;
+        // Charging is shown by colour only: an endless pulse would keep the second screen redrawing.
+        this.charging = charging;
         if (levelAnim != null) levelAnim.cancel();
         levelAnim = ValueAnimator.ofFloat(shown, level).setDuration(600);
         levelAnim.addUpdateListener(a -> {
@@ -72,7 +61,6 @@ public class BatteryView extends View {
 
         int color = charging ? cCharging : (level <= 0.15f ? cLow : cNormal);
         fill.setColor(color);
-        fill.setAlpha((int) (255 * pulse));
         float inner = 2.5f * d;
         float maxW = bodyW - 0.75f * d - inner * 2;
         c.drawRoundRect(r.left + inner, r.top + inner, r.left + inner + Math.max(1.5f * d, maxW * shown),
@@ -82,7 +70,6 @@ public class BatteryView extends View {
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        if (pulseAnim != null) pulseAnim.cancel();
         if (levelAnim != null) levelAnim.cancel();
     }
 }

@@ -224,6 +224,14 @@
             android:summary="@string/summary_companion_screen"
             android:title="@string/title_companion_screen"
             app:iconSpaceReserved="false" />
+
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:dependency="checkbox_enable_companion_screen"
+            android:key="checkbox_companion_idle_dim"
+            android:summary="@string/summary_companion_idle_dim"
+            android:title="@string/title_companion_idle_dim"
+            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
     <PreferenceCategory

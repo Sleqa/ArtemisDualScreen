@@ -299,6 +299,7 @@ public class PreferenceConfiguration {
 
     public boolean enableFullExDisplay;
     public boolean enableCompanionScreen;
+    public boolean companionIdleDim;
 
     //串流画面顶部居中显示
     public boolean alignDisplayTopCenter;
@@ -966,6 +967,7 @@ private static int getFramePacingValue(Context context) {
 
         config.enableFullExDisplay=prefs.getBoolean("checkbox_enable_fullexdisplay",false);
         config.enableCompanionScreen=prefs.getBoolean("checkbox_enable_companion_screen",false);
+        config.companionIdleDim=prefs.getBoolean("checkbox_companion_idle_dim",true);
 
         config.alignDisplayTopCenter =prefs.getBoolean("checkbox_enable_view_top_center",false);
 

@@ -733,6 +733,8 @@
     <!-- ArtemisDS second-screen companion -->
     <string name="title_companion_screen">Second-screen companion</string>
     <string name="summary_companion_screen">For built-in dual-screen devices such as the AYN Thor. Keeps the stream on the main screen and shows a touchpad, keyboard, keybinds, stream stats, time and battery on the second screen. Not for casting to an external monitor; use External Display Mode for that.</string>
+    <string name="title_companion_idle_dim">Dim second screen when idle</string>
+    <string name="summary_companion_idle_dim">After 45 seconds without a touch, the second screen fades to black with a faint clock to save battery on the AMOLED panel. Tap to wake.</string>
     <string name="companion_tab_touchpad">Touchpad</string>
     <string name="companion_tab_keyboard">Keyboard</string>
     <string name="companion_tab_keybinds">Keybinds</string>

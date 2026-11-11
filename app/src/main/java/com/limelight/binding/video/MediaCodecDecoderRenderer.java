@@ -199,6 +199,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private int numFramesOut;
 
     private int targetFps = 0;
+    private StreamPerfHint perfHint;
 
     private MediaCodecInfo findAvcDecoder() {
         MediaCodecInfo decoder = MediaCodecHelper.findProbableSafeDecoder("video/avc", MediaCodecInfo.CodecProfileLevel.AVCProfileHigh);
@@ -839,6 +840,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     @Override
     public int setup(int format, int width, int height, int redrawRate) {
         this.targetFps = (redrawRate > 0 ? redrawRate : 60);
+        if (perfHint != null) perfHint.release();
+        perfHint = StreamPerfHint.isSupported() ? new StreamPerfHint(context, this.targetFps) : null;
         this.initialWidth = invertResolution ? height : width;
         this.initialHeight = invertResolution ? width : height;
         this.videoFormat = format;
@@ -1189,6 +1192,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
         choreographerHandler.post(new Runnable() {
             @Override
             public void run() {
+                if (perfHint != null) perfHint.addThread(Process.myTid());
                 Choreographer.getInstance().postFrameCallback(MediaCodecDecoderRenderer.this);
             }
         });
@@ -1201,6 +1205,7 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
             public void run() {
                 // Boost thread priority to reduce decoding latency
                 android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY);
+                if (perfHint != null) perfHint.addThread(android.os.Process.myTid());
 
                 // Compute display refresh and vsync period once (fallback 60 Hz if unavailable)
                 long vsyncPeriodNs;
@@ -1685,6 +1690,10 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     @Override
     public void cleanup() {
+        if (perfHint != null) {
+            perfHint.release();
+            perfHint = null;
+        }
         videoDecoder.release();
     }
 
@@ -1785,6 +1794,31 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     @SuppressWarnings("deprecation")
     @Override
     public int submitDecodeUnit(byte[] decodeUnitData, int decodeUnitLength, int decodeUnitType,
+                                int frameNumber, int frameType, char frameHostProcessingLatency,
+                                long receiveTimeMs, long enqueueTimeMs) {
+        StreamPerfHint hint = perfHint;
+        if (hint == null) {
+            return submitDecodeUnitInternal(decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber,
+                    frameType, frameHostProcessingLatency, receiveTimeMs, enqueueTimeMs);
+        }
+        if (perfHintSubmitTid == 0) {
+            perfHintSubmitTid = Process.myTid();
+            hint.addThread(perfHintSubmitTid);
+        }
+        if (frameNumber != lastFrameNumber) {
+            // A new frame started: report the work spent on the previous one.
+            hint.frameDone();
+        }
+        long start = System.nanoTime();
+        int ret = submitDecodeUnitInternal(decodeUnitData, decodeUnitLength, decodeUnitType, frameNumber,
+                frameType, frameHostProcessingLatency, receiveTimeMs, enqueueTimeMs);
+        hint.addWork(System.nanoTime() - start);
+        return ret;
+    }
+
+    private int perfHintSubmitTid;
+
+    private int submitDecodeUnitInternal(byte[] decodeUnitData, int decodeUnitLength, int decodeUnitType,
                                 int frameNumber, int frameType, char frameHostProcessingLatency,
                                 long receiveTimeMs, long enqueueTimeMs) {
         if (stopping) {

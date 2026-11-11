@@ -210,6 +210,9 @@ public class PcView extends AppCompatActivity implements AdapterFragmentCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // ArtemisDS: one-time tuned defaults on the AYN Thor (never overrides user choices)
+        com.limelight.companion.ThorDevice.applyRecommendedDefaultsOnce(this);
+
         // Assume we're in the foreground when created to avoid a race
         // between binding to CMS and onResume()
         inForeground = true;

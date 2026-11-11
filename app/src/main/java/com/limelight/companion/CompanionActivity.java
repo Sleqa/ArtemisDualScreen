@@ -1,6 +1,5 @@
 package com.limelight.companion;
 
-import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
@@ -89,7 +88,16 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
     private BatteryView waitingBatteryIcon;
 
     private long sessionStart;
-    private ObjectAnimator dotPulse;
+    private Boolean lastHealthy;
+
+    // Idle dimming: an OLED-black scrim over the second screen after a period without touches.
+    // Black pixels on AMOLED draw almost no power, and a static scrim means no redraws.
+    private static final long IDLE_DIM_MS = 45_000;
+    private final android.os.Handler idleHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private View idleScrim;
+    private boolean idleDimEnabled;
+    private boolean dimmed;
+    private final Runnable dimRunnable = this::dim;
 
     private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
@@ -113,6 +121,7 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
         setupKeybinds();
         setupStats();
         setupWaiting();
+        setupIdleDim();
 
         CompanionBridge.setListener(this);
         if (CompanionBridge.isStreaming()) {
@@ -155,7 +164,7 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
             unregisterReceiver(batteryReceiver);
         } catch (IllegalArgumentException ignored) {
         }
-        if (dotPulse != null) dotPulse.cancel();
+        idleHandler.removeCallbacksAndMessages(null);
         super.onDestroy();
     }
 
@@ -169,11 +178,6 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
         batteryIcon = findViewById(R.id.status_battery_icon);
         statsText.setText("—");
 
-        dotPulse = ObjectAnimator.ofFloat(statusDot, View.ALPHA, 1f, 0.35f);
-        dotPulse.setDuration(1000);
-        dotPulse.setRepeatMode(ValueAnimator.REVERSE);
-        dotPulse.setRepeatCount(ValueAnimator.INFINITE);
-        dotPulse.start();
 
         HoldButton disconnect = findViewById(R.id.status_disconnect);
         disconnect.setOnConfirmed(() -> {
@@ -504,8 +508,15 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
         statsText.setText(String.format(Locale.US, "%.0f fps · %d ms · %s", s.totalFps, s.rttMs, res));
         boolean healthy = s.rttMs < 40 && s.networkDropPercent < 2f
                 && (s.targetFps <= 0 || s.totalFps >= s.targetFps * 0.9f);
-        statusDot.getBackground().mutate().setTint(getResources().getColor(
-                healthy ? R.color.companion_accent : R.color.companion_warning));
+        if (lastHealthy == null || lastHealthy != healthy) {
+            lastHealthy = healthy;
+            statusDot.getBackground().mutate().setTint(getResources().getColor(
+                    healthy ? R.color.companion_accent : R.color.companion_warning));
+            statusDot.setScaleX(1.8f);
+            statusDot.setScaleY(1.8f);
+            statusDot.animate().scaleX(1f).scaleY(1f).setDuration(320)
+                    .setInterpolator(new OvershootInterpolator(3f)).start();
+        }
 
         tileFps.set(s.totalFps, getString(R.string.companion_sub_fps, s.receivedFps, s.renderedFps));
         tileNet.set(s.rttMs, getString(R.string.companion_sub_rtt, s.rttVarianceMs));
@@ -549,6 +560,7 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
     @Override
     public void onStreamStarted() {
         sessionStart = SystemClock.elapsedRealtime();
+        scheduleDim();
         refreshHostName();
         if (overlaySwitch != null && Game.instance != null) overlaySwitch.setChecked(Game.instance.isHudVisible());
         if (waiting.getVisibility() == View.VISIBLE) {
@@ -580,6 +592,68 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
         View root = findViewById(R.id.companion_root);
         root.animate().alpha(0f).setDuration(220).withEndAction(this::finish).start();
     }
+
+    // ------------------------------------------------------------------ idle dimming
+
+    private void setupIdleDim() {
+        idleDimEnabled = com.limelight.preferences.PreferenceConfiguration.readPreferences(this).companionIdleDim;
+        FrameLayout root = findViewById(R.id.companion_root);
+        FrameLayout scrim = new FrameLayout(this);
+        scrim.setBackgroundColor(0xF2000000);
+        scrim.setVisibility(View.GONE);
+        scrim.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        android.widget.TextClock clock = new android.widget.TextClock(this);
+        clock.setFormat12Hour("h:mm");
+        clock.setFormat24Hour("HH:mm");
+        clock.setTextSize(44);
+        clock.setTypeface(android.graphics.Typeface.MONOSPACE);
+        clock.setTextColor(0xFF3A3A42);
+        scrim.addView(clock, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        root.addView(scrim, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        idleScrim = scrim;
+        if (CompanionBridge.isStreaming()) scheduleDim();
+    }
+
+    private void scheduleDim() {
+        idleHandler.removeCallbacks(dimRunnable);
+        if (idleDimEnabled) idleHandler.postDelayed(dimRunnable, IDLE_DIM_MS);
+    }
+
+    private void dim() {
+        if (!CompanionBridge.isStreaming() || dimmed) return;
+        dimmed = true;
+        idleScrim.setAlpha(0f);
+        idleScrim.setVisibility(View.VISIBLE);
+        idleScrim.animate().alpha(1f).setDuration(600).start();
+    }
+
+    /** Returns true when the touch only woke the screen and must not reach the controls. */
+    private boolean wake() {
+        scheduleDim();
+        if (!dimmed) return false;
+        dimmed = false;
+        idleScrim.animate().alpha(0f).setDuration(220)
+                .withEndAction(() -> idleScrim.setVisibility(View.GONE)).start();
+        return true;
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            if (wake()) {
+                swallowGesture = true;
+                return true;
+            }
+            swallowGesture = false;
+        } else if (swallowGesture) {
+            return true;
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    private boolean swallowGesture;
 
     // ------------------------------------------------------------------ input forwarding
 
