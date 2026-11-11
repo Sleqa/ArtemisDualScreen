@@ -1,5 +1,7 @@
 package com.limelight.binding.video;
 
+import com.limelight.companion.CompanionBridge;
+import com.limelight.companion.StreamStats;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -140,6 +142,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
     private String glRenderer;
     private boolean foreground = true;
     private PerfOverlayListener perfListener;
+    private long companionLastNetBytes = -1;
+    private long companionLastNetTime;
 
     private static final int CR_MAX_TRIES = 10;
     private static final int CR_RECOVERY_TYPE_NONE = 0;
@@ -526,6 +530,44 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     public void notifyVideoBackground() {
         foreground = false;
+    }
+
+
+    /** Structured one-second stats for the ArtemisDS second-screen companion. */
+    private void publishCompanionStats(VideoStats lastTwo, VideoStatsFps fps, String decoder,
+                                       float decodeTimeMs, long rttInfo) {
+        float bandwidth = -1;
+        long rx = TrafficStatsHelper.getPackageRxBytes(Process.myUid());
+        if (rx != TrafficStats.UNSUPPORTED) {
+            long bytes = rx + TrafficStatsHelper.getPackageTxBytes(Process.myUid());
+            long now = SystemClock.uptimeMillis();
+            if (companionLastNetBytes >= 0 && now > companionLastNetTime) {
+                bandwidth = (bytes - companionLastNetBytes) / 1024f * 1000f / (now - companionLastNetTime);
+            }
+            companionLastNetBytes = bytes;
+            companionLastNetTime = now;
+        }
+
+        String codec;
+        if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
+            codec = "H.264";
+        } else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
+            codec = (videoFormat & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 ? "HEVC Main10" : "HEVC";
+        } else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
+            codec = (videoFormat & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0 ? "AV1 10-bit" : "AV1";
+        } else {
+            codec = "—";
+        }
+
+        float hostLatency = lastTwo.framesWithHostProcessingLatency > 0
+                ? (float) lastTwo.totalHostProcessingLatency / 10 / lastTwo.framesWithHostProcessingLatency
+                : -1f;
+        float drops = lastTwo.totalFrames > 0 ? (float) lastTwo.framesLost / lastTwo.totalFrames * 100 : 0f;
+
+        CompanionBridge.publishStats(new StreamStats(initialWidth, initialHeight, Math.round(prefs.fps),
+                fps.totalFps, fps.receivedFps, fps.renderedFps, drops,
+                (int) (rttInfo >> 32), (int) rttInfo, hostLatency,
+                lastTwo.totalFramesReceived > 0 ? decodeTimeMs : -1f, codec, decoder, bandwidth));
     }
 
     public int getActiveVideoFormat() {
@@ -1771,7 +1813,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
         // Flip stats windows roughly every second
         if (SystemClock.uptimeMillis() >= activeWindowVideoStats.measurementStartTimestamp + 1000) {
-            if (prefs.enablePerfOverlay || prefs.enablePerfLogging) {
+            boolean companionListening = CompanionBridge.hasListener();
+            if (prefs.enablePerfOverlay || prefs.enablePerfLogging || companionListening) {
                 VideoStats lastTwo = new VideoStats();
                 lastTwo.add(lastWindowVideoStats);
                 lastTwo.add(activeWindowVideoStats);
@@ -1790,6 +1833,9 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
                 float decodeTimeMs = (float)lastTwo.decoderTimeMs / lastTwo.totalFramesReceived;
                 long rttInfo = MoonBridge.getEstimatedRttInfo();
+                if (companionListening) {
+                    publishCompanionStats(lastTwo, fps, decoder, decodeTimeMs, rttInfo);
+                }
                 StringBuilder sb = new StringBuilder();
                 if(prefs.enablePerfOverlayLite){
                     if(TrafficStatsHelper.getPackageRxBytes(Process.myUid()) != TrafficStats.UNSUPPORTED){

@@ -28,6 +28,7 @@ import com.limelight.binding.video.CrashListener;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
 import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.binding.video.PerfOverlayListener;
+import com.limelight.companion.CompanionBridge;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.StreamConfiguration;
@@ -344,6 +345,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
 
         instance = this;
         timerHandler = new Handler(Looper.getMainLooper());
+
+        // ArtemisDS: open the touchpad/keyboard/stats companion on a built-in second screen.
+        CompanionBridge.launchIfEnabled(this);
 
         UiHelper.setLocale(this);
 
@@ -1703,6 +1707,9 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         super.onDestroy();
 
         instance = null;
+        if (isFinishing()) {
+            CompanionBridge.notifyStreamStopped();
+        }
         timerHandler.removeCallbacksAndMessages(null);
 
         if (prefConfig.enableFullExDisplay) handleDisplayRemoved();
@@ -3671,6 +3678,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 connected = true;
                 connecting = false;
                 updatePipAutoEnter();
+                CompanionBridge.notifyStreamStarted();
 
                 // Hide the mouse cursor now after a short delay.
                 // Doing it before dismissing the spinner seems to be undone
@@ -4190,6 +4198,10 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // Always exit zoom mode if mouse mode has changed
         isPanZoomMode = false;
         updateZoomButtonAppearance();
+    }
+
+    public boolean isHudVisible() {
+        return prefConfig.enablePerfOverlay;
     }
 
     public void toggleHUD() {

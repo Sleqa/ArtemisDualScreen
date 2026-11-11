@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/companion_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/companion_bg">
+
+    <LinearLayout
+        android:id="@+id/companion_main"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Status bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="12dp">
+
+            <TextClock
+                android:id="@+id/status_clock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="h:mm"
+                android:format24Hour="HH:mm"
+                android:textColor="@color/companion_text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/status_host"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/companion_text_secondary"
+                android:textSize="13sp"
+                tools:text="Gaming PC" />
+
+            <LinearLayout
+                android:id="@+id/status_stats_chip"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:background="@drawable/companion_bg_chip"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp">
+
+                <View
+                    android:id="@+id/status_dot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/companion_dot" />
+
+                <TextView
+                    android:id="@+id/status_stats"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="7dp"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/companion_text_soft"
+                    android:textSize="12sp"
+                    tools:text="60 fps · 14 ms · 1080p" />
+            </LinearLayout>
+
+            <com.limelight.companion.view.BatteryView
+                android:id="@+id/status_battery_icon"
+                android:layout_width="24dp"
+                android:layout_height="13dp"
+                android:layout_marginStart="12dp" />
+
+            <TextView
+                android:id="@+id/status_battery"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:textColor="@color/companion_text_soft"
+                android:textSize="13sp"
+                tools:text="78%" />
+
+            <com.limelight.companion.view.HoldButton
+                android:id="@+id/status_disconnect"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/companion_bg_disconnect"
+                android:contentDescription="@string/companion_hold_to_disconnect"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/companion_ic_power"
+                android:tint="@color/companion_warning" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/companion_divider" />
+
+        <FrameLayout
+            android:id="@+id/companion_pages"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <include
+                android:id="@+id/page_touchpad"
+                layout="@layout/companion_page_touchpad" />
+
+            <include
+                android:id="@+id/page_keyboard"
+                layout="@layout/companion_page_keyboard"
+                android:visibility="gone" />
+
+            <include
+                android:id="@+id/page_keybinds"
+                layout="@layout/companion_page_keybinds"
+                android:visibility="gone" />
+
+            <include
+                android:id="@+id/page_stats"
+                layout="@layout/companion_page_stats"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/companion_divider" />
+
+        <!-- Tab bar: the indicator pill slides behind the selected tab -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:paddingStart="10dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="8dp">
+
+            <View
+                android:id="@+id/tab_indicator"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:background="@drawable/companion_bg_tab_indicator" />
+
+            <LinearLayout
+                android:id="@+id/tab_bar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
+
+                <include
+                    android:id="@+id/tab_touchpad"
+                    layout="@layout/companion_tab" />
+
+                <include
+                    android:id="@+id/tab_keyboard"
+                    layout="@layout/companion_tab" />
+
+                <include
+                    android:id="@+id/tab_keybinds"
+                    layout="@layout/companion_tab" />
+
+                <include
+                    android:id="@+id/tab_stats"
+                    layout="@layout/companion_tab" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+
+    <include
+        android:id="@+id/companion_waiting"
+        layout="@layout/companion_waiting" />
+</FrameLayout>

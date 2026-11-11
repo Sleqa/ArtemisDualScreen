@@ -298,6 +298,7 @@ public class PreferenceConfiguration {
     public boolean enableNewAnalogStick;
 
     public boolean enableFullExDisplay;
+    public boolean enableCompanionScreen;
 
     //串流画面顶部居中显示
     public boolean alignDisplayTopCenter;
@@ -964,6 +965,7 @@ private static int getFramePacingValue(Context context) {
         config.enableNewAnalogStick=prefs.getBoolean(CHECKBOX_CHECKBOX_ENABLE_ANALOG_STICK_NEW,false);
 
         config.enableFullExDisplay=prefs.getBoolean("checkbox_enable_fullexdisplay",false);
+        config.enableCompanionScreen=prefs.getBoolean("checkbox_enable_companion_screen",false);
 
         config.alignDisplayTopCenter =prefs.getBoolean("checkbox_enable_view_top_center",false);
 

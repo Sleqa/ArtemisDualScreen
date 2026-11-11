@@ -161,6 +161,21 @@
             android:launchMode="singleInstance"
             android:taskAffinity=""
             android:theme="@style/ExternalDisplayControllerTheme"/>
+        <!-- ArtemisDS second-screen companion (AYN Thor bottom screen) -->
+        <activity android:name=".companion.CompanionActivity"
+            android:exported="false"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection|density"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.limelight.companion"
+            android:resizeableActivity="true"
+            android:theme="@style/CompanionTheme"/>
+        <activity android:name=".companion.KeybindEditorActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity="com.limelight.companion"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/CompanionTheme"/>
         <activity
             android:name=".preferences.StreamSettings"
             android:resizeableActivity="true"

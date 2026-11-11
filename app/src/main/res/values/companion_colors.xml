@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ArtemisDS second-screen companion: OLED-black palette -->
+    <color name="companion_bg">#FF000000</color>
+    <color name="companion_surface">#FF0C0C10</color>
+    <color name="companion_surface_raised">#FF111116</color>
+    <color name="companion_button">#FF16161C</color>
+    <color name="companion_key">#FF141419</color>
+    <color name="companion_key_wide">#FF1A1A21</color>
+    <color name="companion_chip">#FF131318</color>
+    <color name="companion_keycap">#FF1D1D25</color>
+    <color name="companion_divider">#FF1C1C21</color>
+    <color name="companion_stroke">#FF22222A</color>
+    <color name="companion_stroke_strong">#FF2A2A32</color>
+    <color name="companion_text">#FFF2F2F4</color>
+    <color name="companion_text_soft">#FFD8D8DE</color>
+    <color name="companion_text_secondary">#FFA0A0AA</color>
+    <color name="companion_text_faint">#FF8A8A94</color>
+    <color name="companion_accent">#FF5CB8FF</color>
+    <color name="companion_accent_dim">#FF1F3A52</color>
+    <color name="companion_tab_active">#FF10202E</color>
+    <color name="companion_on_accent">#FF04121F</color>
+    <color name="companion_warning">#FFFF9F5A</color>
+    <color name="companion_warning_bg">#FF1A0F0A</color>
+    <color name="companion_warning_stroke">#FF3A2318</color>
+</resources>

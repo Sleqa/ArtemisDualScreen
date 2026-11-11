@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <include
+            android:id="@+id/tile_fps"
+            layout="@layout/companion_stat_tile" />
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp" />
+
+        <include
+            android:id="@+id/tile_net"
+            layout="@layout/companion_stat_tile" />
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp" />
+
+        <include
+            android:id="@+id/tile_host"
+            layout="@layout/companion_stat_tile" />
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp" />
+
+        <include
+            android:id="@+id/tile_decode"
+            layout="@layout/companion_stat_tile" />
+    </LinearLayout>
+
+    <GridLayout
+        android:id="@+id/stats_details"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1"
+        android:background="@drawable/companion_bg_surface"
+        android:columnCount="2"
+        android:paddingStart="14dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="6dp"
+        android:useDefaultMargins="false" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/stats_overlay_switch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/companion_overlay_toggle"
+            android:textColor="@color/companion_text_soft"
+            android:textSize="13sp"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="@string/companion_updates_every_second"
+            android:textColor="@color/companion_text_faint"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>
