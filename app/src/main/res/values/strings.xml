@@ -743,13 +743,8 @@
     <string name="companion_not_streaming">Not streaming</string>
     <string name="companion_waiting_message">Start a game from the top screen. Touchpad, keyboard, keybinds and stats appear here once the stream connects.</string>
     <string name="companion_edit_keybinds">Edit keybinds</string>
-    <string name="companion_relative">Relative</string>
-    <string name="companion_absolute">Absolute</string>
     <string name="companion_touch_hint_relative">Drag to move the cursor like a laptop trackpad</string>
-    <string name="companion_touch_hint_absolute">Touch maps directly to the host screen</string>
-    <string name="companion_touch_hint_gestures">Tap to click · two fingers to scroll or right-click · double-tap and hold to drag</string>
-    <string name="companion_left_click">Left click</string>
-    <string name="companion_right_click">Right click</string>
+    <string name="companion_touch_hint_gestures">Tap to click · two-finger tap to right-click · two fingers to scroll · double-tap and hold to drag</string>
     <string name="companion_scroll_strip">Scroll strip</string>
     <string name="companion_mods_idle">Tap Ctrl, Alt, Shift or Win to hold it for the next key</string>
     <string name="companion_mods_held">Holding %1$s: the next key sends the combo</string>

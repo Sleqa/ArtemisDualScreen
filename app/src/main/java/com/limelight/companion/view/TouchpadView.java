@@ -23,10 +23,10 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Touchpad surface. A dim dot grid lights up in the accent colour around the finger, taps
- * send a ripple outward, and gestures are turned into host mouse input:
+ * Relative (laptop-style) touchpad. A dim dot grid lights up in the accent colour around the
+ * finger, taps send a ripple outward, and gestures are turned into host mouse input:
  * <ul>
- *   <li>one finger: move (relative) or point (absolute)</li>
+ *   <li>one finger: move the cursor</li>
  *   <li>tap: left click, two-finger tap: right click</li>
  *   <li>two-finger drag: scroll</li>
  *   <li>double-tap and hold: drag with the left button held</li>
@@ -55,7 +55,6 @@ public class TouchpadView extends View {
     private final float cornerRadius;
     private final int touchSlop;
 
-    private boolean absoluteMode;
     private float sensitivity = 1.6f;
     private Listener listener;
 
@@ -106,14 +105,6 @@ public class TouchpadView extends View {
 
     public void setListener(Listener l) {
         listener = l;
-    }
-
-    public void setAbsoluteMode(boolean absolute) {
-        absoluteMode = absolute;
-    }
-
-    public boolean isAbsoluteMode() {
-        return absoluteMode;
     }
 
     public void setSensitivity(float s) {
@@ -240,9 +231,7 @@ public class TouchpadView extends View {
                 addRipple(downX, downY);
                 if (listener != null) listener.onActiveChanged(true);
 
-                if (absoluteMode) {
-                    sendAbsolute(e.getX(), e.getY());
-                } else if (downTime - lastTapUpTime < DOUBLE_TAP_WINDOW_MS) {
+                if (downTime - lastTapUpTime < DOUBLE_TAP_WINDOW_MS) {
                     dragging = true;
                     InputSender.mouseDown(MouseButtonPacket.BUTTON_LEFT);
                     performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
@@ -272,8 +261,6 @@ public class TouchpadView extends View {
                         InputSender.scroll(amount);
                         scrollRem -= amount;
                     }
-                } else if (absoluteMode) {
-                    sendAbsolute(x, y);
                 } else if (maxPointers == 1) {
                     float dx = (x - lastX) * sensitivity + remX;
                     float dy = (y - lastY) * sensitivity + remY;
@@ -308,9 +295,6 @@ public class TouchpadView extends View {
                     byte button = maxPointers >= 2 ? MouseButtonPacket.BUTTON_RIGHT : MouseButtonPacket.BUTTON_LEFT;
                     click(button);
                     lastTapUpTime = maxPointers >= 2 ? 0 : e.getEventTime();
-                } else if (absoluteMode && !cancelled && !scrolling && maxPointers == 1) {
-                    // Absolute mode: a press-drag-release acts like touching the screen.
-                    lastTapUpTime = 0;
                 } else {
                     lastTapUpTime = 0;
                 }
@@ -326,11 +310,6 @@ public class TouchpadView extends View {
         InputSender.mouseDown(button);
         postDelayed(() -> InputSender.mouseUp(button), 30);
         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-    }
-
-    private void sendAbsolute(float x, float y) {
-        int w = Math.max(1, getWidth()), h = Math.max(1, getHeight());
-        InputSender.mousePosition((int) Math.max(0, Math.min(w, x)), (int) Math.max(0, Math.min(h, y)), w, h);
     }
 
     private static float averageY(MotionEvent e) {

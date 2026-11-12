@@ -46,7 +46,6 @@ import com.limelight.companion.view.HoldButton;
 import com.limelight.companion.view.KeyboardView;
 import com.limelight.companion.view.SparklineView;
 import com.limelight.companion.view.TouchpadView;
-import com.limelight.nvstream.input.MouseButtonPacket;
 
 import java.util.Locale;
 
@@ -57,7 +56,6 @@ import java.util.Locale;
 public class CompanionActivity extends AppCompatActivity implements CompanionBridge.Listener {
 
     private static final String PREF_TAB = "last_tab";
-    private static final String PREF_ABSOLUTE = "touchpad_absolute";
 
     private SharedPreferences prefs;
 
@@ -75,7 +73,7 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
     // Pages
     private TouchpadView touchpad;
     private View touchHint;
-    private TextView touchHintText, modeRelative, modeAbsolute, modsLine;
+    private TextView modsLine;
     private KeybindAdapter keybindAdapter;
     private TextView keybindsEdit, keybindsSubline;
     private StatTile tileFps, tileNet, tileHost, tileDecode;
@@ -294,53 +292,11 @@ public class CompanionActivity extends AppCompatActivity implements CompanionBri
 
     // ------------------------------------------------------------------ touchpad
 
-    @SuppressLint("ClickableViewAccessibility")
     private void setupTouchpad() {
         touchpad = findViewById(R.id.touchpad);
         touchHint = findViewById(R.id.touch_hint);
-        touchHintText = findViewById(R.id.touch_hint_text);
-        modeRelative = findViewById(R.id.mode_relative);
-        modeAbsolute = findViewById(R.id.mode_absolute);
-
         touchpad.setListener(active -> touchHint.animate().alpha(active ? 0.12f : 1f)
                 .setDuration(active ? 150 : 400).start());
-        modeRelative.setOnClickListener(v -> setAbsolute(false));
-        modeAbsolute.setOnClickListener(v -> setAbsolute(true));
-        setAbsolute(prefs.getBoolean(PREF_ABSOLUTE, false));
-
-        bindMouseButton(findViewById(R.id.click_left), MouseButtonPacket.BUTTON_LEFT);
-        bindMouseButton(findViewById(R.id.click_right), MouseButtonPacket.BUTTON_RIGHT);
-    }
-
-    private void setAbsolute(boolean absolute) {
-        touchpad.setAbsoluteMode(absolute);
-        modeRelative.setSelected(!absolute);
-        modeAbsolute.setSelected(absolute);
-        touchHintText.setText(absolute ? R.string.companion_touch_hint_absolute : R.string.companion_touch_hint_relative);
-        prefs.edit().putBoolean(PREF_ABSOLUTE, absolute).apply();
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private void bindMouseButton(View button, byte mouseButton) {
-        // Press and release follow the finger so click-and-hold drags work.
-        button.setOnTouchListener((v, e) -> {
-            switch (e.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    v.setPressed(true);
-                    v.animate().scaleX(0.96f).scaleY(0.96f).setDuration(90).start();
-                    v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
-                    InputSender.mouseDown(mouseButton);
-                    return true;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    v.setPressed(false);
-                    v.animate().scaleX(1f).scaleY(1f).setDuration(220)
-                            .setInterpolator(new OvershootInterpolator(2f)).start();
-                    InputSender.mouseUp(mouseButton);
-                    return true;
-            }
-            return false;
-        });
     }
 
     // ------------------------------------------------------------------ keyboard
